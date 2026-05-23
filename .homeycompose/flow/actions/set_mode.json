@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "Set McCallister Guard mode",
+    "no": "Sett McCallister Guard-modus"
+  },
+  "titleFormatted": {
+    "en": "Set McCallister Guard mode to [[mode]]",
+    "no": "Sett McCallister Guard-modus til [[mode]]"
+  },
+  "args": [
+    {
+      "name": "mode",
+      "type": "dropdown",
+      "values": [
+        { "id": "disarmed",   "label": { "en": "Disarmed (Start entry delay)", "no": "Deaktivert (start innpassering)" } },
+        { "id": "armed_away", "label": { "en": "Armed away (with exit delay)", "no": "Borte (med utpassering)" } },
+        { "id": "armed_stay", "label": { "en": "Armed stay (immediate)",       "no": "Nattmodus (umiddelbart)" } }
+      ]
+    }
+  ]
+}

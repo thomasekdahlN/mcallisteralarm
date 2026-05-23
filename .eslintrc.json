@@ -1,0 +1,38 @@
+{
+  "extends": "athom/homey-app",
+  "overrides": [
+    {
+      "files": [
+        "*.ts"
+      ],
+      "parser": "@typescript-eslint/parser",
+      "plugins": [
+        "@typescript-eslint"
+      ],
+      "parserOptions": {
+        "ecmaVersion": 2020,
+        "sourceType": "module"
+      },
+      "rules": {
+        "node/no-missing-import": "off",
+        "node/no-unsupported-features/es-syntax": "off",
+        "node/no-unpublished-import": "off",
+        "import/no-unresolved": "off",
+        "import/extensions": "off",
+        "no-useless-constructor": "off",
+        "no-empty-function": "off",
+        "@typescript-eslint/no-useless-constructor": "error",
+        "@typescript-eslint/no-explicit-any": "off",
+        "camelcase": "off",
+        "no-mixed-operators": "off",
+        "brace-style": [
+          "error",
+          "1tbs",
+          {
+            "allowSingleLine": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "Mode !{{is|is not}} [[mode]]",
+    "no": "Modus !{{er|er ikke}} [[mode]]"
+  },
+  "titleFormatted": {
+    "en": "Mode !{{is|is not}} [[mode]]",
+    "no": "Modus !{{er|er ikke}} [[mode]]"
+  },
+  "args": [
+    {
+      "name": "mode",
+      "type": "dropdown",
+      "values": [
+        { "id": "disarmed",   "label": { "en": "Disarmed",   "no": "Deaktivert" } },
+        { "id": "armed_away", "label": { "en": "Armed away", "no": "Borte" } },
+        { "id": "armed_stay", "label": { "en": "Armed stay", "no": "Natt" } }
+      ]
+    }
+  ]
+}

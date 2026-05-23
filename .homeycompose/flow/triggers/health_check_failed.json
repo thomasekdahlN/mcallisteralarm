@@ -1,0 +1,14 @@
+{
+  "title": {
+    "en": "Health check failed (offline devices)",
+    "no": "Helsesjekk feilet (offline enheter)"
+  },
+  "tokens": [
+    {
+      "name": "offline_count",
+      "type": "number",
+      "title": { "en": "Offline count", "no": "Antall offline" },
+      "example": 1
+    }
+  ]
+}

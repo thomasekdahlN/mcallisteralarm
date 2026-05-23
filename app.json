@@ -1,0 +1,218 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.mccallister.guard",
+  "version": "1.0.0",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "runtime": "nodejs",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "McCallister Guard",
+    "no": "McCallister Guard"
+  },
+  "description": {
+    "en": "Home Alone inspired smart security: psychological deterrence for intruders.",
+    "no": "Alene Hjemme-inspirert smart sikkerhet: psykologisk avskrekking av tyver."
+  },
+  "category": [
+    "security",
+    "lights"
+  ],
+  "permissions": [
+    "homey:manager:api"
+  ],
+  "brandColor": "#1f3a5f",
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Thomas Ekdahl",
+    "email": "thomas@ekdahl.no"
+  },
+  "api": {
+    "getStatus": {
+      "method": "GET",
+      "path": "/status"
+    },
+    "getEventLog": {
+      "method": "GET",
+      "path": "/events"
+    },
+    "getZones": {
+      "method": "GET",
+      "path": "/zones"
+    },
+    "getSettings": {
+      "method": "GET",
+      "path": "/settings"
+    },
+    "setSettings": {
+      "method": "PUT",
+      "path": "/settings"
+    },
+    "setMode": {
+      "method": "POST",
+      "path": "/mode"
+    },
+    "triggerPanic": {
+      "method": "POST",
+      "path": "/panic"
+    }
+  },
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "Alarm escalated to CRISIS level",
+          "no": "Alarm eskalert til KRISENIVÅ"
+        },
+        "id": "alarm_escalated"
+      },
+      {
+        "title": {
+          "en": "Deterrence started in zone",
+          "no": "Avskrekking startet i sone"
+        },
+        "titleFormatted": {
+          "en": "Deterrence started in zone [[zone]]",
+          "no": "Avskrekking startet i sone [[zone]]"
+        },
+        "tokens": [
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "Zone",
+              "no": "Sone"
+            },
+            "example": {
+              "en": "Master bedroom",
+              "no": "Hovedsoverom"
+            }
+          }
+        ],
+        "id": "deterrence_started"
+      },
+      {
+        "title": {
+          "en": "Health check failed (offline devices)",
+          "no": "Helsesjekk feilet (offline enheter)"
+        },
+        "tokens": [
+          {
+            "name": "offline_count",
+            "type": "number",
+            "title": {
+              "en": "Offline count",
+              "no": "Antall offline"
+            },
+            "example": 1
+          }
+        ],
+        "id": "health_check_failed"
+      }
+    ],
+    "conditions": [
+      {
+        "title": {
+          "en": "Deterrence !{{is|is not}} currently active",
+          "no": "Avskrekking !{{pågår|pågår ikke}} akkurat nå"
+        },
+        "id": "deterrence_active"
+      },
+      {
+        "title": {
+          "en": "Mode !{{is|is not}} [[mode]]",
+          "no": "Modus !{{er|er ikke}} [[mode]]"
+        },
+        "titleFormatted": {
+          "en": "Mode !{{is|is not}} [[mode]]",
+          "no": "Modus !{{er|er ikke}} [[mode]]"
+        },
+        "args": [
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "disarmed",
+                "label": {
+                  "en": "Disarmed",
+                  "no": "Deaktivert"
+                }
+              },
+              {
+                "id": "armed_away",
+                "label": {
+                  "en": "Armed away",
+                  "no": "Borte"
+                }
+              },
+              {
+                "id": "armed_stay",
+                "label": {
+                  "en": "Armed stay",
+                  "no": "Natt"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "is_armed"
+      }
+    ],
+    "actions": [
+      {
+        "title": {
+          "en": "Set McCallister Guard mode",
+          "no": "Sett McCallister Guard-modus"
+        },
+        "titleFormatted": {
+          "en": "Set McCallister Guard mode to [[mode]]",
+          "no": "Sett McCallister Guard-modus til [[mode]]"
+        },
+        "args": [
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "disarmed",
+                "label": {
+                  "en": "Disarmed (Start entry delay)",
+                  "no": "Deaktivert (start innpassering)"
+                }
+              },
+              {
+                "id": "armed_away",
+                "label": {
+                  "en": "Armed away (with exit delay)",
+                  "no": "Borte (med utpassering)"
+                }
+              },
+              {
+                "id": "armed_stay",
+                "label": {
+                  "en": "Armed stay (immediate)",
+                  "no": "Nattmodus (umiddelbart)"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "set_mode"
+      },
+      {
+        "title": {
+          "en": "Trigger panic (full escalation immediately)",
+          "no": "Utløs panikk (full eskalering umiddelbart)"
+        },
+        "id": "trigger_panic"
+      }
+    ]
+  }
+}

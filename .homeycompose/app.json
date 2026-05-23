@@ -1,0 +1,65 @@
+{
+  "id": "com.mccallister.guard",
+  "version": "1.0.0",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "runtime": "nodejs",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "McCallister Guard",
+    "no": "McCallister Guard"
+  },
+  "description": {
+    "en": "Home Alone inspired smart security: psychological deterrence for intruders.",
+    "no": "Alene Hjemme-inspirert smart sikkerhet: psykologisk avskrekking av tyver."
+  },
+  "category": [
+    "security",
+    "lights"
+  ],
+  "permissions": [
+    "homey:manager:api"
+  ],
+  "brandColor": "#1f3a5f",
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "Thomas Ekdahl",
+    "email": "thomas@ekdahl.no"
+  },
+  "api": {
+    "getStatus": {
+      "method": "GET",
+      "path": "/status"
+    },
+    "getEventLog": {
+      "method": "GET",
+      "path": "/events"
+    },
+    "getZones": {
+      "method": "GET",
+      "path": "/zones"
+    },
+    "getSettings": {
+      "method": "GET",
+      "path": "/settings"
+    },
+    "setSettings": {
+      "method": "PUT",
+      "path": "/settings"
+    },
+    "setMode": {
+      "method": "POST",
+      "path": "/mode"
+    },
+    "triggerPanic": {
+      "method": "POST",
+      "path": "/panic"
+    }
+  }
+}
