@@ -1,167 +1,447 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
-<meta charset="utf-8">
-<title>McCallister Guard</title>
-<script type="text/javascript" src="/homey.js" data-origin="settings"></script>
-<style>
-  body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; color: #222; }
-  h2 { margin: 4px 0 12px; }
-  h3 { margin: 24px 0 8px; font-size: 16px; }
-  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .mode-btn { flex: 1; padding: 14px; border: 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; color: #fff; }
-  .mode-btn.disarmed   { background: #2ecc71; }
-  .mode-btn.armed_away { background: #e67e22; }
-  .mode-btn.armed_stay { background: #2980b9; }
-  .mode-btn.panic      { background: #c0392b; flex: 0 0 100%; }
-  .mode-btn.inactive   { opacity: 0.45; }
-  .status-line { padding: 12px; background: #f4f4f6; border-radius: 8px; margin-bottom: 8px; }
-  .crisis { background: #c0392b !important; color: #fff; animation: blink 0.6s linear infinite; }
-  @keyframes blink { 50% { opacity: 0.55; } }
-  .zone-card { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; background: #ecf0f1; }
-  .zone-card.motion { background: #e74c3c; color: #fff; }
-  .zone-card.deter  { background: #3498db; color: #fff; }
-  .log-entry { font-size: 12px; padding: 6px 10px; border-bottom: 1px solid #eee; }
-  .log-entry .lvl { display: inline-block; min-width: 70px; font-weight: 600; }
-  .lvl.info { color: #2c3e50; } .lvl.warning { color: #e67e22; } .lvl.alarm { color: #c0392b; } .lvl.critical { color: #8e44ad; }
-  .settings-grid { display: grid; grid-template-columns: 1fr 120px; gap: 8px 12px; align-items: center; }
-  .settings-grid input[type=number], .settings-grid input[type=time], .settings-grid input[type=url] { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-  .zone-list-cfg label { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
-  details summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
-  .matrix-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 0; }
-  .save-btn { padding: 10px 16px; background: #1f3a5f; color: #fff; border: 0; border-radius: 6px; cursor: pointer; font-weight: 600; }
-</style>
+  <meta charset="utf-8">
+  <title>McCallister Guard</title>
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    body {
+      font-family: -apple-system, system-ui, sans-serif;
+      margin: 0;
+      padding: 16px;
+      color: #222;
+    }
+
+    h2 {
+      margin: 4px 0 12px;
+    }
+
+    h3 {
+      margin: 20px 0 8px;
+      font-size: 16px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .mode-btn.disarmed {
+      background: #2ecc71;
+    }
+
+    .mode-btn.armed_away {
+      background: #e67e22;
+    }
+
+    .mode-btn.armed_stay {
+      background: #2980b9;
+    }
+
+    .mode-btn.panic {
+      background: #c0392b;
+      flex: 0 0 100%;
+    }
+
+    .mode-btn.inactive {
+      opacity: 0.45;
+    }
+
+    .status-line {
+      padding: 12px;
+      background: #f4f4f6;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .status-line .mode-label {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .status-line .meta {
+      font-size: 12px;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    .crisis {
+      background: #c0392b !important;
+      color: #fff;
+      animation: blink 0.6s linear infinite;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0.55;
+      }
+    }
+
+    .zone-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      background: #ecf0f1;
+    }
+
+    .zone-card.motion {
+      background: #e74c3c;
+      color: #fff;
+    }
+
+    .zone-card.deter {
+      background: #3498db;
+      color: #fff;
+    }
+
+    .log-entry {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .log-entry .lvl {
+      display: inline-block;
+      min-width: 70px;
+      font-weight: 600;
+    }
+
+    .lvl.info {
+      color: #2c3e50;
+    }
+
+    .lvl.warning {
+      color: #e67e22;
+    }
+
+    .lvl.alarm {
+      color: #c0392b;
+    }
+
+    .lvl.critical {
+      color: #8e44ad;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 8px 12px;
+      align-items: center;
+    }
+
+    .settings-grid input[type=number],
+    .settings-grid input[type=time],
+    .settings-grid input[type=url] {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .zone-list-cfg label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .matrix-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 4px 0;
+      align-items: center;
+    }
+
+    .matrix-row select {
+      padding: 4px;
+    }
+
+    .save-btn {
+      padding: 10px 16px;
+      background: #1f3a5f;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .save-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .saved-toast {
+      display: inline-block;
+      margin-left: 12px;
+      color: #27ae60;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .saved-toast.visible {
+      opacity: 1;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-bottom: 16px;
+      gap: 2px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      background: #f4f4f6;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .tab-btn.active {
+      color: #1f3a5f;
+      border-bottom-color: #1f3a5f;
+      background: #fff;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .info-banner {
+      padding: 10px 12px;
+      background: #fff8e1;
+      border-left: 4px solid #f1c40f;
+      font-size: 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      color: #555;
+    }
+  </style>
 </head>
+
 <body>
-<h2>McCallister Guard</h2>
-<div id="status" class="status-line">Laster status…</div>
+  <h2>McCallister Guard</h2>
 
-<div class="row" style="margin-bottom:12px;">
-  <button class="mode-btn disarmed"   data-mode="disarmed">Deaktivert</button>
-  <button class="mode-btn armed_away" data-mode="armed_away">Borte</button>
-  <button class="mode-btn armed_stay" data-mode="armed_stay">Natt</button>
-  <button class="mode-btn panic" id="btn-panic">🚨 PANIKK</button>
-</div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" data-tab="zones">Soneoversikt</button>
+    <button class="tab-btn" data-tab="settings">Innstillinger</button>
+    <button class="tab-btn" data-tab="log">Hendelseslogg</button>
+  </div>
 
-<h3>Soneoversikt</h3>
-<div id="zones"></div>
+  <section class="tab-panel active" id="tab-dashboard">
+    <div id="status" class="status-line">Laster status…</div>
+    <div class="row" style="margin-bottom:12px;">
+      <button class="mode-btn disarmed" data-mode="disarmed">Deaktivert</button>
+      <button class="mode-btn armed_away" data-mode="armed_away">Borte</button>
+      <button class="mode-btn armed_stay" data-mode="armed_stay">Natt</button>
+      <button class="mode-btn panic" id="btn-panic">🚨 PANIKK</button>
+    </div>
+    <div class="info-banner">Alarmen aktiveres kun via knappene over eller en flow. Som standard antas det at du er
+      hjemme (deaktivert).</div>
+  </section>
 
-<details open>
-  <summary>Innstillinger</summary>
-  <div class="settings-grid" id="settings-grid"></div>
-  <h3 style="margin-top:16px;">Kevin-modus soner (whitelist)</h3>
-  <div class="zone-list-cfg" id="kevin-zones"></div>
-  <h3>Sone-matrise (deteksjon → reaksjon)</h3>
-  <div id="zone-matrix"></div>
-  <div style="margin-top:12px;"><button class="save-btn" id="btn-save">Lagre innstillinger</button></div>
-</details>
+  <section class="tab-panel" id="tab-zones">
+    <div id="zones"></div>
+  </section>
 
-<h3>Hendelseslogg (siste 150)</h3>
-<div id="log" style="max-height: 320px; overflow-y: auto; border:1px solid #eee; border-radius:6px;"></div>
+  <section class="tab-panel" id="tab-settings">
+    <div class="settings-grid" id="settings-grid"></div>
+    <h3>Kevin-modus soner (whitelist)</h3>
+    <div class="zone-list-cfg" id="kevin-zones"></div>
+    <h3>Sone-matrise (deteksjon → reaksjon)</h3>
+    <div id="zone-matrix"></div>
+    <div style="margin-top:16px;">
+      <button class="save-btn" id="btn-save">Lagre innstillinger</button>
+      <span class="saved-toast" id="saved-toast">✓ Lagret</span>
+    </div>
+  </section>
 
-<script>
-function onHomeyReady(Homey) {
-  Homey.ready();
+  <section class="tab-panel" id="tab-log">
+    <div id="log" style="max-height: 480px; overflow-y: auto; border:1px solid #eee; border-radius:6px;"></div>
+  </section>
 
-  const $ = (id) => document.getElementById(id);
-  const fmtTs = (ts) => new Date(ts).toISOString().replace('T', ' ').substring(0, 19);
+  <script>
+    function onHomeyReady(Homey) {
+      Homey.ready();
 
-  let zones = []; let settings = null;
+      const $ = (id) => document.getElementById(id);
+      const fmtTs = (ts) => {
+        if (!ts) return '–';
+        const d = new Date(ts);
+        return d.toLocaleString('no-NO', { dateStyle: 'short', timeStyle: 'medium' });
+      };
 
-  async function refresh() {
-    try {
-      const [status, log, z, s] = await Promise.all([
-        Homey.api('GET', '/status'),
-        Homey.api('GET', '/events'),
-        Homey.api('GET', '/zones'),
-        Homey.api('GET', '/settings'),
-      ]);
-      zones = z; settings = s;
-      renderStatus(status);
-      renderZones(status);
-      renderLog(log);
-      renderSettings();
-    } catch (err) { $('status').textContent = 'Feil: ' + (err.message || err); }
-  }
+      let zones = [];
+      let settings = null;
+      let settingsRendered = false;
 
-  function renderStatus(s) {
-    const el = $('status');
-    el.classList.toggle('crisis', s.inCrisis);
-    el.innerHTML = `<strong>Modus:</strong> ${s.mode}`
-      + (s.escalationPending ? ' · ⏳ Eskalering venter' : '')
-      + (s.inCrisis ? ' · 🚨 KRISE' : '')
-      + (s.simulationRunning ? ' · Kevin aktiv' : '');
-    document.querySelectorAll('.mode-btn[data-mode]').forEach((b) => {
-      b.classList.toggle('inactive', b.dataset.mode !== s.mode);
-    });
-  }
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+          btn.classList.add('active');
+          $('tab-' + btn.dataset.tab).classList.add('active');
+        });
+      });
 
-  function renderZones(s) {
-    const html = zones.map((z) => {
-      const cls = (z.id === s.activeMotionZone) ? 'motion'
-        : (z.id === s.activeDeterrenceZone) ? 'deter' : '';
-      const tag = (z.id === s.activeMotionZone) ? 'BEVEGELSE'
-        : (z.id === s.activeDeterrenceZone) ? 'AVSKREKKING' : '—';
-      return `<div class="zone-card ${cls}"><span>${z.name}</span><span>${tag}</span></div>`;
-    }).join('');
-    $('zones').innerHTML = html || '<em>Ingen soner funnet.</em>';
-  }
+      async function loadStaticOnce() {
+        try {
+          const [z, s] = await Promise.all([
+            Homey.api('GET', '/zones'),
+            Homey.api('GET', '/settings'),
+          ]);
+          zones = z;
+          settings = s;
+          renderSettings();
+          settingsRendered = true;
+        } catch (err) {
+          $('status').textContent = 'Feil ved lasting: ' + (err.message || err);
+        }
+      }
 
-  function renderLog(entries) {
-    $('log').innerHTML = entries.map((e) => `<div class="log-entry">`
-      + `<span class="lvl ${e.level}">${e.level.toUpperCase()}</span> `
-      + `<span>${fmtTs(e.ts)}</span> — ${e.message}</div>`).join('') || '<em>Tom logg.</em>';
-  }
+      async function refreshLive() {
+        try {
+          const [status, log] = await Promise.all([
+            Homey.api('GET', '/status'),
+            Homey.api('GET', '/events'),
+          ]);
+          renderStatus(status);
+          renderZones(status);
+          renderLog(log);
+        } catch (err) {
+          $('status').textContent = 'Feil: ' + (err.message || err);
+        }
+      }
 
-  function renderSettings() {
-    const fields = [
-      ['bedtime',           'Bedtime (HH:MM)',         'time'],
-      ['sunset_offset',     'Sunset offset (min)',     'number'],
-      ['random_min',        'Random min (min)',        'number'],
-      ['random_max',        'Random max (min)',        'number'],
-      ['deterrence_delay',  'Deterrence delay (s)',    'number'],
-      ['exit_delay',        'Exit delay (s)',          'number'],
-      ['entry_delay',       'Entry delay (s)',         'number'],
-      ['escalation_minutes','Escalation time (min)',   'number'],
-      ['custom_audio_url',  'Custom audio URL',        'url'],
-    ];
-    $('settings-grid').innerHTML = fields.map(([k, label, t]) => `<label for="set_${k}">${label}</label>`
-      + `<input id="set_${k}" type="${t}" value="${settings[k] ?? ''}">`).join('');
+      function modeLabel(mode) {
+        return mode === 'armed_away' ? 'Borte'
+          : mode === 'armed_stay' ? 'Natt'
+            : 'Deaktivert';
+      }
 
-    $('kevin-zones').innerHTML = zones.map((z) => `<label>`
-      + `<input type="checkbox" data-kevin="${z.id}" ${settings.kevin_zones[z.id] ? 'checked' : ''}> ${z.name}</label>`).join('');
+      function renderStatus(s) {
+        const el = $('status');
+        el.classList.toggle('crisis', s.inCrisis);
+        const extras = [];
+        if (s.escalationPending) extras.push('⏳ Eskalering venter');
+        if (s.inCrisis) extras.push('🚨 KRISE');
+        if (s.simulationRunning) extras.push('Kevin aktiv');
+        el.innerHTML = `<div class="mode-label">Modus: ${modeLabel(s.mode)}</div>`
+          + `<div class="meta">Sist endret: ${fmtTs(s.modeChangedAt)}</div>`
+          + (extras.length ? `<div class="meta">${extras.join(' · ')}</div>` : '');
+        document.querySelectorAll('.mode-btn[data-mode]').forEach((b) => {
+          b.classList.toggle('inactive', b.dataset.mode !== s.mode);
+        });
+      }
 
-    $('zone-matrix').innerHTML = zones.map((z) => {
-      const opts = zones.map((r) => `<option value="${r.id}" ${settings.zone_matrix[z.id] === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
-      return `<div class="matrix-row"><span>${z.name}</span>`
-        + `<select data-matrix="${z.id}"><option value="">— ingen —</option>${opts}</select></div>`;
-    }).join('');
-  }
+      function renderZones(s) {
+        const html = zones.map((z) => {
+          const cls = (z.id === s.activeMotionZone) ? 'motion'
+            : (z.id === s.activeDeterrenceZone) ? 'deter' : '';
+          const tag = (z.id === s.activeMotionZone) ? 'BEVEGELSE'
+            : (z.id === s.activeDeterrenceZone) ? 'AVSKREKKING' : '–';
+          return `<div class="zone-card ${cls}"><span>${z.name}</span><span>${tag}</span></div>`;
+        }).join('');
+        $('zones').innerHTML = html || '<em>Ingen soner funnet.</em>';
+      }
 
-  document.querySelectorAll('.mode-btn[data-mode]').forEach((b) => {
-    b.addEventListener('click', async () => {
-      await Homey.api('POST', '/mode', { mode: b.dataset.mode });
-      refresh();
-    });
-  });
-  $('btn-panic').addEventListener('click', async () => {
-    if (!confirm('Utløse PANIKK?')) return;
-    await Homey.api('POST', '/panic', {});
-    refresh();
-  });
-  $('btn-save').addEventListener('click', async () => {
-    const payload = { kevin_zones: {}, zone_matrix: {} };
-    ['bedtime','sunset_offset','random_min','random_max','deterrence_delay','exit_delay','entry_delay','escalation_minutes','custom_audio_url']
-      .forEach((k) => { const v = $('set_' + k).value; payload[k] = (k === 'bedtime' || k === 'custom_audio_url') ? v : Number(v); });
-    document.querySelectorAll('[data-kevin]').forEach((c) => { payload.kevin_zones[c.dataset.kevin] = c.checked; });
-    document.querySelectorAll('[data-matrix]').forEach((s) => { if (s.value) payload.zone_matrix[s.dataset.matrix] = s.value; });
-    await Homey.api('PUT', '/settings', payload);
-    refresh();
-  });
+      function renderLog(entries) {
+        $('log').innerHTML = entries.map((e) => `<div class="log-entry">`
+          + `<span class="lvl ${e.level}">${e.level.toUpperCase()}</span> `
+          + `<span>${fmtTs(e.ts)}</span> — ${e.message}</div>`).join('') || '<em>Tom logg.</em>';
+      }
 
-  refresh();
-  setInterval(refresh, 3000);
-}
-</script>
+      function renderSettings() {
+        const fields = [
+          ['bedtime', 'Bedtime (HH:MM)', 'time'],
+          ['sunset_offset', 'Sunset offset (min)', 'number'],
+          ['random_min', 'Random min (min)', 'number'],
+          ['random_max', 'Random max (min)', 'number'],
+          ['deterrence_delay', 'Deterrence delay (s)', 'number'],
+          ['exit_delay', 'Exit delay (s)', 'number'],
+          ['entry_delay', 'Entry delay (s)', 'number'],
+          ['escalation_minutes', 'Escalation time (min)', 'number'],
+          ['custom_audio_url', 'Custom audio URL', 'url'],
+        ];
+        $('settings-grid').innerHTML = fields.map(([k, label, t]) => `<label for="set_${k}">${label}</label>`
+          + `<input id="set_${k}" type="${t}" value="${settings[k] ?? ''}">`).join('');
+
+        $('kevin-zones').innerHTML = zones.map((z) => `<label>`
+          + `<input type="checkbox" data-kevin="${z.id}" ${settings.kevin_zones[z.id] ? 'checked' : ''}> ${z.name}</label>`).join('');
+
+        $('zone-matrix').innerHTML = zones.map((z) => {
+          const opts = zones.map((r) => `<option value="${r.id}" ${settings.zone_matrix[z.id] === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
+          return `<div class="matrix-row"><span>${z.name}</span>`
+            + `<select data-matrix="${z.id}"><option value="">— ingen —</option>${opts}</select></div>`;
+        }).join('');
+      }
+
+      document.querySelectorAll('.mode-btn[data-mode]').forEach((b) => {
+        b.addEventListener('click', async () => {
+          await Homey.api('POST', '/mode', { mode: b.dataset.mode });
+          refreshLive();
+        });
+      });
+      $('btn-panic').addEventListener('click', async () => {
+        if (!confirm('Utløse PANIKK?')) return;
+        await Homey.api('POST', '/panic', {});
+        refreshLive();
+      });
+      $('btn-save').addEventListener('click', async () => {
+        const btn = $('btn-save');
+        btn.disabled = true;
+        const payload = { kevin_zones: {}, zone_matrix: {} };
+        ['bedtime', 'sunset_offset', 'random_min', 'random_max', 'deterrence_delay', 'exit_delay', 'entry_delay', 'escalation_minutes', 'custom_audio_url']
+          .forEach((k) => { const v = $('set_' + k).value; payload[k] = (k === 'bedtime' || k === 'custom_audio_url') ? v : Number(v); });
+        document.querySelectorAll('[data-kevin]').forEach((c) => { payload.kevin_zones[c.dataset.kevin] = c.checked; });
+        document.querySelectorAll('[data-matrix]').forEach((s) => { if (s.value) payload.zone_matrix[s.dataset.matrix] = s.value; });
+        try {
+          settings = await Homey.api('PUT', '/settings', payload);
+          const toast = $('saved-toast');
+          toast.classList.add('visible');
+          setTimeout(() => toast.classList.remove('visible'), 1800);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      (async () => {
+        await loadStaticOnce();
+        await refreshLive();
+        setInterval(refreshLive, 3000);
+      })();
+    }
+  </script>
 </body>
+
 </html>

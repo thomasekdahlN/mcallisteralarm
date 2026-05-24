@@ -46,6 +46,7 @@ export const DEFAULT_SETTINGS: GuardSettings = {
 
 export const SETTINGS_KEYS = {
   MODE: 'mode',
+  MODE_CHANGED_AT: 'mode_changed_at',
   EVENT_LOG: 'event_log',
   SETTINGS: 'guard_settings',
 } as const;

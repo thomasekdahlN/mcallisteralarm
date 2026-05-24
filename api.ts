@@ -8,7 +8,7 @@ interface AppRef {
   setMode(mode: Mode): Promise<void>;
   triggerPanic(): Promise<void>;
   homeyApi: any;
-  stateMachine: { getMode(): Mode };
+  stateMachine: { getMode(): Mode; getModeChangedAt(): number };
   deterrence: { getActiveZone(): string | null; getActiveMotionZone(): string | null };
   eventLog: { recent(limit?: number): unknown[] };
   escalation: { isInCrisis(): boolean; isPending(): boolean };
@@ -24,6 +24,7 @@ module.exports = {
     const { app } = homey;
     return {
       mode: app.stateMachine.getMode(),
+      modeChangedAt: app.stateMachine.getModeChangedAt(),
       activeDeterrenceZone: app.deterrence.getActiveZone(),
       activeMotionZone: app.deterrence.getActiveMotionZone(),
       simulationRunning: app.simulation.isRunning(),

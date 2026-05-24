@@ -9,6 +9,7 @@ export type ModeChangeListener = (mode: Mode, previous: Mode) => void;
 export default class StateMachine {
 
   private mode: Mode;
+  private modeChangedAt: number;
   private exitTimer: NodeJS.Timeout | null = null;
   private entryTimer: NodeJS.Timeout | null = null;
   private listeners: ModeChangeListener[] = [];
@@ -19,10 +20,16 @@ export default class StateMachine {
   ) {
     const stored = this.homey.settings.get(SETTINGS_KEYS.MODE) as Mode | null;
     this.mode = stored ?? 'disarmed';
+    const storedTs = this.homey.settings.get(SETTINGS_KEYS.MODE_CHANGED_AT) as number | null;
+    this.modeChangedAt = typeof storedTs === 'number' ? storedTs : Date.now();
   }
 
   getMode(): Mode {
     return this.mode;
+  }
+
+  getModeChangedAt(): number {
+    return this.modeChangedAt;
   }
 
   onModeChange(listener: ModeChangeListener): void {
@@ -72,7 +79,9 @@ export default class StateMachine {
   private applyMode(next: Mode): void {
     const previous = this.mode;
     this.mode = next;
+    this.modeChangedAt = Date.now();
     this.homey.settings.set(SETTINGS_KEYS.MODE, next);
+    this.homey.settings.set(SETTINGS_KEYS.MODE_CHANGED_AT, this.modeChangedAt);
     this.log.add('info', `Modus endret: ${previous} → ${next}.`);
     for (const listener of this.listeners) {
       try {

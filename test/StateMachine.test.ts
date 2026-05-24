@@ -38,6 +38,15 @@ describe('StateMachine', () => {
     expect(homey.settings._store[SETTINGS_KEYS.MODE]).toBe('armed_stay');
   });
 
+  it('lagrer og leser tidspunkt for siste modus-endring', async () => {
+    vi.setSystemTime(new Date('2025-06-01T12:00:00Z'));
+    const sm = new StateMachine(homey as never, log);
+    await sm.setMode('armed_stay');
+    const ts = sm.getModeChangedAt();
+    expect(ts).toBe(new Date('2025-06-01T12:00:00Z').getTime());
+    expect(homey.settings._store[SETTINGS_KEYS.MODE_CHANGED_AT]).toBe(ts);
+  });
+
   it('utsetter armed_away med exit-delay', async () => {
     const sm = new StateMachine(homey as never, log);
     await sm.setMode('armed_away', 30);
