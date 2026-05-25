@@ -178,7 +178,8 @@ homey app install
    (🚪 dør/vindu, 👁️ bevegelse) som er oppdaget.
 3. Definer **reaksjonssone-matrise** per sone — f.eks. «bevegelse på loft → spill avskrekking i stua».
 4. Sett **lyd-/video-URL** per sone hvis du vil overstyre defaults (forslag fra `assets/media/` er forhåndsutfylt).
-5. **Skallsikring:** hak av sensorene som skal være aktive i Skallsikring-modus (typisk ytterdører, vinduer,
+5. **Skallsikring:** i hver sone vises et **Skallsikring**-felt med alle dør-/vindu- og bevegelses-sensorer
+   i sonen. Hak av de sensorene som skal være aktive i Skallsikring-modus (typisk ytterdører, vinduer,
    uteområder). Andre sensorer ignoreres når Skallsikring er aktiv.
 6. **Cast-skjermer uten `cast_url`:** for Chromecast/Nest Hub/Sonos som ikke eksponerer direkte URL-cast, bygg
    en Homey-flow på `alarm_triggered`-trigger og bruk `Cast en URL`-actionen i den respektive cast-appen

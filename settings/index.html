@@ -360,6 +360,12 @@
       font-size: 11px;
     }
 
+    .zone-body .sensor-empty {
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+    }
+
     .zone-body .test-btn {
       grid-column: 1 / -1;
       padding: 8px 14px;
@@ -465,10 +471,10 @@
       </ul>
 
       <h3>Skallsikring — velg sensorer per sone</h3>
-      <p>Under hver sone i Soneoversikten listes alle dør-/vindu- og bevegelses-sensorer som er plassert i sonen.
-        Hak av de sensorene som skal være aktive i Skallsikring-modus. Når Skallsikring er aktiv, ignoreres alle
-        andre sensorer — kun de avhakede kan trigge alarm. Hvis ingen sensorer er valgt globalt brukes alle som
-        før (bakoverkompatibelt).</p>
+      <p>Under hver sone i Soneoversikten har du et <strong>Skallsikring</strong>-felt som lister alle
+        dør-/vindu- og bevegelses-sensorer i sonen. Hak av de sensorene som skal være aktive i
+        Skallsikring-modus. Når Skallsikring er aktiv, ignoreres alle andre sensorer — kun de avhakede kan
+        trigge alarm. Hvis ingen sensorer er valgt globalt brukes alle som før (bakoverkompatibelt).</p>
 
       <h3>Avskrekking (sone-matrise)</h3>
       <p>Når bevegelse oppdages i en sone, slår appen opp <strong>reaksjonssonen</strong> i sone-matrisen. F.eks.: tyv
@@ -755,10 +761,9 @@
               return `<label class="sensor-row"><input type="checkbox" data-perimeter="${esc(s.id)}" ${checked}>`
                 + `<span>${icon} ${esc(s.name)} <em class="sensor-type">(${typeLabel})</em></span></label>`;
             }).join('');
-            sensorBlock = `<label>Sensorer</label><div class="sensor-list">${sensorRows}`
-              + `<div class="info-banner hint">Hak av sensorene som skal være aktive i <strong>Skallsikring</strong>. Hvis ingen er valgt globalt, brukes alle (bakoverkompatibelt).</div></div>`;
+            sensorBlock = `<label>Skallsikring</label><div class="sensor-list">${sensorRows}</div>`;
           } else {
-            sensorBlock = `<label>Sensorer</label><div class="info-banner hint">Ingen dør/vindu- eller bevegelses-sensorer i denne sonen.</div>`;
+            sensorBlock = `<label>Skallsikring</label><div class="sensor-empty">Ingen dør/vindu- eller bevegelses-sensorer i denne sonen.</div>`;
           }
 
           return `<details class="zone-block" data-zone="${esc(z.id)}">`

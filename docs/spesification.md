@@ -128,9 +128,9 @@ Brukes når huseier sover.
 
 * Tilstedeværelsessimulering (Modul 1) er **DEAKTIVERT**.
 * **Brukervalgte perimeter-sensorer er aktive** — konfigureres per sone i settings-UI under
-  «Soneoversikt» (innstillingen `perimeter_sensors`). Typisk valg er ytterdører, vinduer og
-  utendørssensorer. Bevegelsessensorer innendørs hakes vanligvis vekk slik at man kan gå
-  rundt om natten uten å utløse alarm.
+  «Soneoversikt» i feltet **Skallsikring** (innstillingen `perimeter_sensors`). Typisk valg er
+  ytterdører, vinduer og utendørssensorer. Bevegelsessensorer innendørs hakes vanligvis vekk slik
+  at man kan gå rundt om natten uten å utløse alarm.
 * Alle andre sensorer som ikke er hakket av som perimeter-sensorer **ignoreres** i denne modusen.
 * Hvis ingen sensorer er valgt globalt, brukes alle sensorer som fallback (bakoverkompatibelt).
 * Når en perimeter-sensor trigges hoppes det over "mind-games" og det går rett til *Eskalert Alarm (Krise)*.
