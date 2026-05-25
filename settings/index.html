@@ -547,7 +547,7 @@
       let settings = null;
       let suggestedAudio = [];
       let suggestedVideo = [];
-      let lastStatus = { activeMotionZone: null, activeDeterrenceZone: null };
+      let lastStatus = { activeMotionZone: null, activeDeterrenceZone: null, recentMotionZones: [] };
 
       const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -629,8 +629,8 @@
       }
 
       function zoneStatusPill(zoneId) {
-        if (zoneId === lastStatus.activeMotionZone) return '<span class="status-pill motion">BEVEGELSE</span>';
         if (zoneId === lastStatus.activeDeterrenceZone) return '<span class="status-pill deter">AVSKREKKING</span>';
+        if ((lastStatus.recentMotionZones || []).includes(zoneId)) return '<span class="status-pill motion">BEVEGELSE</span>';
         return '<span class="status-pill">–</span>';
       }
 
@@ -709,14 +709,15 @@
       }
 
       function updateZoneStatusPills(s) {
+        const recent = s.recentMotionZones || [];
         document.querySelectorAll('.zone-block').forEach((el) => {
           const id = el.dataset.zone;
           const pill = el.querySelector('summary .status-pill');
           if (!pill) return;
           pill.className = 'status-pill';
           pill.textContent = '–';
-          if (id === s.activeMotionZone) { pill.classList.add('motion'); pill.textContent = 'BEVEGELSE'; }
-          else if (id === s.activeDeterrenceZone) { pill.classList.add('deter'); pill.textContent = 'AVSKREKKING'; }
+          if (id === s.activeDeterrenceZone) { pill.classList.add('deter'); pill.textContent = 'AVSKREKKING'; }
+          else if (recent.includes(id)) { pill.classList.add('motion'); pill.textContent = 'BEVEGELSE'; }
         });
       }
 

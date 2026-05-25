@@ -27,29 +27,49 @@ export default class MediaCaster {
     await this.stopZone(zoneId);
     const devices = await this.zoneDevices(zoneId);
 
-    const screen = devices.find((d: any) => Array.isArray(d.capabilities)
-      && (d.capabilities.includes('speaker_playing') || d.capabilities.includes('cast_url')));
+    const screen = devices.find((d: any) => Array.isArray(d.capabilities) && d.capabilities.includes('cast_url'));
 
-    if (screen && screen.capabilities.includes('cast_url')) {
-      const url = videoUrl ?? '/assets/media/blue-lights.mp4';
+    if (screen) {
+      const url = await this.resolveAssetUrl(videoUrl ?? '/assets/media/blue-lights.mp4');
       try {
         await screen.setCapabilityValue({ capabilityId: 'cast_url', value: url });
         this.active.set(zoneId, { stop: async () => this.stopScreen(screen) });
-        this.log.add('info', `Caster video (${url}) til skjerm i sone ${zoneId}.`, zoneId);
+        this.log.add('info', `Caster video (${url}) til ${screen.name ?? 'skjerm'} i sone ${zoneId}.`, zoneId);
         return;
       } catch (err) {
-        this.log.add('warning', `Cast feilet: ${(err as Error).message}. Faller tilbake til lys.`, zoneId);
+        this.log.add('warning', `Video-cast til ${screen.name ?? 'skjerm'} feilet: ${(err as Error).message}. Faller tilbake til lys.`, zoneId);
       }
+    } else {
+      this.log.add('info', `Ingen cast-skjerm funnet i sone ${zoneId}, bruker blinkende lys.`, zoneId);
     }
     await this.startLightStrobe(zoneId, devices, [BLUE_HUE, RED_HUE]);
   }
 
   async startSiren(zoneId: string, customUrl: string | null): Promise<void> {
-    const url = customUrl ?? '/assets/media/police-siren.ogg';
+    const rawUrl = customUrl ?? '/assets/media/police-siren.ogg';
+    const url = await this.resolveAssetUrl(rawUrl);
     const devices = await this.zoneDevices(zoneId);
+
+    const castSpeaker = devices.find((d: any) => Array.isArray(d.capabilities) && d.capabilities.includes('cast_url'));
+    if (castSpeaker) {
+      try {
+        if (castSpeaker.capabilities.includes('volume_set')) {
+          await castSpeaker.setCapabilityValue({ capabilityId: 'volume_set', value: 1.0 });
+        }
+        await castSpeaker.setCapabilityValue({ capabilityId: 'cast_url', value: url });
+        this.log.add('info', `Caster lyd (${url}) til ${castSpeaker.name ?? 'høyttaler'} i sone ${zoneId}.`, zoneId);
+        return;
+      } catch (err) {
+        this.log.add('warning', `Lyd-cast til ${castSpeaker.name ?? 'høyttaler'} feilet: ${(err as Error).message}.`, zoneId);
+      }
+    }
+
     const speaker = devices.find((d: any) => Array.isArray(d.capabilities)
       && (d.capabilities.includes('speaker_playing') || d.capabilities.includes('volume_set')));
-    if (!speaker) return;
+    if (!speaker) {
+      this.log.add('warning', `Ingen høyttaler funnet i sone ${zoneId}.`, zoneId);
+      return;
+    }
     try {
       if (speaker.capabilities.includes('volume_set')) {
         await speaker.setCapabilityValue({ capabilityId: 'volume_set', value: 1.0 });
@@ -57,10 +77,26 @@ export default class MediaCaster {
       if (speaker.capabilities.includes('speaker_playing')) {
         await speaker.setCapabilityValue({ capabilityId: 'speaker_playing', value: true });
       }
-      this.log.add('info', `Spiller sirene (${url}) i sone ${zoneId}.`, zoneId);
+      this.log.add('info', `Spiller på ${speaker.name ?? 'høyttaler'} (uten URL-cast) i sone ${zoneId}.`, zoneId);
     } catch (err) {
       this.log.add('warning', `Sirene feilet: ${(err as Error).message}`, zoneId);
     }
+  }
+
+  private async resolveAssetUrl(path: string): Promise<string> {
+    if (/^https?:\/\//i.test(path)) return path;
+    try {
+      const { api } = (this.homey as any);
+      if (api?.getLocalUrl) {
+        const base: string = await api.getLocalUrl();
+        const manifest: any = (this.homey as any).manifest ?? {};
+        const appId: string = manifest.id ?? 'com.mccallister.guard';
+        const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+        const assetPath = cleanPath.replace(/^assets\//, '');
+        return `${base.replace(/\/$/, '')}/app/${appId}/asset/${assetPath}`;
+      }
+    } catch { /* fall through */ }
+    return path;
   }
 
   async stopZone(zoneId: string): Promise<void> {

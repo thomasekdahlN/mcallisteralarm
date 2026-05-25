@@ -29,7 +29,9 @@ class McCallisterGuardApp extends Homey.App {
   public cameras!: CameraManager;
 
   private testStopTimer: NodeJS.Timeout | null = null;
+  private motionLastSeen = new Map<string, number>();
   private static readonly TEST_DURATION_MS = 15_000;
+  private static readonly MOTION_RECENT_MS = 60_000;
 
   async onInit(): Promise<void> {
     this.log('McCallister Guard starter opp…');
@@ -101,8 +103,8 @@ class McCallisterGuardApp extends Homey.App {
   async testDeterrence(zoneId: string): Promise<void> {
     this.clearTestStopTimer();
     const seconds = Math.round(McCallisterGuardApp.TEST_DURATION_MS / 1000);
-    this.eventLog.add('info', `Test: simulerer bevegelse i sone ${zoneId} (auto-stopp om ${seconds}s).`, zoneId);
-    await this.deterrence.handleMotion(zoneId);
+    this.eventLog.add('info', `Test: kjører avskrekking direkte i sone ${zoneId} (auto-stopp om ${seconds}s).`, zoneId);
+    await this.deterrence.runDirect(zoneId);
     this.testStopTimer = this.homey.setTimeout(() => {
       this.testStopTimer = null;
       this.deterrence.abort('Test ferdig (auto-stopp).').catch(() => { /* best-effort */ });
@@ -111,6 +113,15 @@ class McCallisterGuardApp extends Homey.App {
 
   isTestActive(): boolean {
     return this.testStopTimer !== null;
+  }
+
+  getRecentMotionZones(): string[] {
+    const cutoff = Date.now() - McCallisterGuardApp.MOTION_RECENT_MS;
+    const result: string[] = [];
+    for (const [zoneId, ts] of this.motionLastSeen) {
+      if (ts >= cutoff) result.push(zoneId);
+    }
+    return result;
   }
 
   async stopAlarm(): Promise<void> {
@@ -204,6 +215,7 @@ class McCallisterGuardApp extends Homey.App {
   }
 
   private async onMotion(zoneId: string, deviceId: string): Promise<void> {
+    this.motionLastSeen.set(zoneId, Date.now());
     const mode = this.stateMachine.getMode();
     if (mode === 'disarmed') return;
     if (this.stateMachine.isExitDelayActive()) return;

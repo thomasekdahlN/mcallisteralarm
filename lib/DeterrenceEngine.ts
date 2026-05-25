@@ -60,6 +60,19 @@ export default class DeterrenceEngine {
     await this.execute(reactionZoneId, motionZoneId);
   }
 
+  async runDirect(zoneId: string): Promise<void> {
+    if (this.activeDeterrenceZone) {
+      await this.media.stopZone(this.activeDeterrenceZone);
+    }
+    this.activeDeterrenceZone = zoneId;
+    const settings = this.getSettings();
+    const videoUrl = settings.zone_video_urls[zoneId] ?? null;
+    const audioUrl = settings.zone_audio_urls[zoneId] ?? settings.custom_audio_url;
+    this.log.add('alarm', `Direkte avskrekking i sone ${zoneId} (test).`, zoneId);
+    await this.media.startBlueLights(zoneId, videoUrl);
+    await this.media.startSiren(zoneId, audioUrl);
+  }
+
   async abort(reason = 'Avbrutt.'): Promise<void> {
     if (this.cooldownTimer) {
       this.homey.clearTimeout(this.cooldownTimer);
