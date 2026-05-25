@@ -63,7 +63,11 @@ export const SUGGESTED_AUDIO_URLS: UrlSuggestion[] = [
   { label: 'Generell alarm-beep (innebygd)', url: '/assets/media/alarm-beep.ogg' },
 ];
 
-export const SUGGESTED_VIDEO_URLS: UrlSuggestion[] = [];
+export const SUGGESTED_VIDEO_URLS: UrlSuggestion[] = [
+  { label: 'Blålys-animasjon (innebygd)', url: '/assets/media/blue-lights.mp4' },
+  { label: 'Politi-silhuett i vinduet (innebygd)', url: '/assets/media/cop-silhouette.mp4' },
+  { label: 'Stor hund (innebygd)', url: '/assets/media/large-dog.mp4' },
+];
 
 export const SETTINGS_KEYS = {
   MODE: 'mode',
