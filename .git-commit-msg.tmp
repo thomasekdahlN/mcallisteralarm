@@ -1,0 +1,22 @@
+fix(deterrence): resolve asset URLs for cast, direct test path, real-motion pill
+
+- MediaCaster.resolveAssetUrl() converts /assets/media/* to full
+  http://<homey-ip>/app/<app-id>/asset/* URLs using homey.api.getLocalUrl(),
+  so Chromecasts and other cast devices can actually fetch the bundled
+  siren/dog-bark/blue-lights files.
+- MediaCaster.startSiren() now prefers cast_url for audio on cast
+  speakers (Google Home, Sonos via cast), falls back to speaker_playing.
+- MediaCaster.startBlueLights() only routes to cast_url when the device
+  truly has that capability, logs which device is targeted.
+- DeterrenceEngine.runDirect(zoneId) is a test path that triggers media
+  in the exact zone the user pressed, bypassing the reaction-zone matrix
+  so Test avskrekking from a sensor-only zone no longer fires media
+  in some other zone.
+- app.testDeterrence() uses runDirect, keeps the 15s auto-stop.
+- app.motionLastSeen + getRecentMotionZones() records real motion
+  timestamps (before mode gating) and exposes zones with motion in
+  the last 60 seconds.
+- /status now returns recentMotionZones; dashboard pill logic uses it
+  so BEVEGELSE only shows on actual sensor activity (not as a side
+  effect of pressing the test button), and AVSKREKKING takes priority
+  over motion on the same zone.
