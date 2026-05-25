@@ -41,11 +41,27 @@ module.exports = {
   },
 
   async getZones({ homey }: Ctx) {
-    const zones = await homey.app.homeyApi.zones.getZones();
+    const [zones, devices] = await Promise.all([
+      homey.app.homeyApi.zones.getZones(),
+      homey.app.homeyApi.devices.getDevices(),
+    ]);
+    const caps: Record<string, { hasAudio: boolean; hasVideo: boolean; hasLights: boolean }> = {};
+    for (const d of Object.values(devices) as any[]) {
+      if (!d.zone || !Array.isArray(d.capabilities)) continue;
+      const c = caps[d.zone] ?? (caps[d.zone] = { hasAudio: false, hasVideo: false, hasLights: false });
+      if (d.capabilities.includes('speaker_playing') || d.capabilities.includes('volume_set')) c.hasAudio = true;
+      if (d.capabilities.includes('cast_url')) c.hasVideo = true;
+      if (d.capabilities.includes('onoff')
+        && !d.capabilities.includes('alarm_motion')
+        && !d.capabilities.includes('alarm_contact')) c.hasLights = true;
+    }
     return Object.values(zones).map((z: any) => ({
       id: z.id,
       name: z.name,
       parent: z.parent ?? null,
+      hasAudio: caps[z.id]?.hasAudio ?? false,
+      hasVideo: caps[z.id]?.hasVideo ?? false,
+      hasLights: caps[z.id]?.hasLights ?? false,
     }));
   },
 

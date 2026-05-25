@@ -297,6 +297,26 @@
       color: #fff;
     }
 
+    .zone-block summary .cap-badges {
+      display: inline-flex;
+      gap: 4px;
+      margin-left: 8px;
+      font-size: 13px;
+      opacity: 0.75;
+    }
+
+    .zone-body .info-banner.warn {
+      grid-column: 1 / -1;
+      background: #fdecea;
+      color: #7a1f1f;
+    }
+
+    .zone-body .info-banner.hint {
+      grid-column: 1 / -1;
+      background: #eaf3fd;
+      color: #1f3a5f;
+    }
+
     .zone-body {
       padding: 12px;
       display: grid;
@@ -498,8 +518,17 @@
             target="_blank">creativecommons.org/licenses/by-sa/3.0</a>.
         </li>
       </ul>
-      <p>Hvis ingen cast-enhet finnes i reaksjonssonen, faller appen automatisk tilbake til blinkende lys i
-        sonen.</p>
+      <h3>Avskrekking pr. sone — hva er mulig?</h3>
+      <p>Hver sone vises i Soneoversikten med små symboler som beskriver hva sonen kan brukes til:</p>
+      <ul>
+        <li>🔊 Sonen har en høyttaler (kan spille sirene, hund, stemme).</li>
+        <li>📺 Sonen har en cast-bar skjerm (kan vise blålys, silhuett, stor hund).</li>
+        <li>💡 Sonen har lys (kan brukes til blink-strobing som siste utvei).</li>
+      </ul>
+      <p>Lyd-URL og video-URL vises kun i soner der det er en faktisk høyttaler eller skjerm. Hvis en sone bare har
+        lys, brukes <strong>blinkende blå/rødt strobe-lys</strong> automatisk som siste utvei — strobe-effekten i
+        et vindu er i seg selv en sterk avskrekking (ligner politilys utenfra). Hvis en sone hverken har lyd, video
+        eller lys, kan den ikke brukes som reaksjonssone og test-knappen er deaktivert.</p>
     </div>
   </section>
 
@@ -605,27 +634,67 @@
         return '<span class="status-pill">–</span>';
       }
 
+      function capBadges(z) {
+        const parts = [];
+        if (z.hasAudio) parts.push('<span title="Kan spille lyd">🔊</span>');
+        if (z.hasVideo) parts.push('<span title="Kan spille video">📺</span>');
+        if (z.hasLights) parts.push('<span title="Har lys (blink-fallback)">💡</span>');
+        return parts.length ? `<span class="cap-badges">${parts.join('')}</span>` : '';
+      }
+
       function renderZoneBlocks() {
         if (!zones.length) { $('zones').innerHTML = '<em>Ingen soner funnet.</em>'; return; }
+        const byId = Object.fromEntries(zones.map((z) => [z.id, z]));
         $('zones').innerHTML = zones.map((z) => {
           const opts = zones.map((r) => `<option value="${esc(r.id)}" ${settings.zone_matrix[z.id] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
           const audio = settings.zone_audio_urls[z.id] || '';
           const video = settings.zone_video_urls[z.id] || '';
+          const reactionId = settings.zone_matrix[z.id] || z.id;
+          const reaction = byId[reactionId] || z;
+          const reactionHasMedia = reaction.hasAudio || reaction.hasVideo;
+          const reactionHasAny = reactionHasMedia || reaction.hasLights;
+
+          let mediaFields = '';
+          if (z.hasAudio) {
+            mediaFields += `<label>Lyd-URL</label>`
+              + `<input type="text" list="audio-suggestions" data-audio="${esc(z.id)}" value="${esc(audio)}" placeholder="standard sirene">`;
+          }
+          if (z.hasVideo) {
+            mediaFields += `<label>Video-URL</label>`
+              + `<input type="text" list="video-suggestions" data-video="${esc(z.id)}" value="${esc(video)}" placeholder="standard blålys">`;
+          }
+          if (!z.hasAudio && !z.hasVideo) {
+            const msg = z.hasLights
+              ? 'Sonen har ingen høyttaler eller skjerm. Avskrekking her vil bruke blinkende lys som siste utvei.'
+              : 'Sonen har ingen lyd-, video- eller lys-enheter. Den kan ikke brukes som reaksjonssone.';
+            const cls = z.hasLights ? 'hint' : 'warn';
+            mediaFields += `<div class="info-banner ${cls}">${msg}</div>`;
+          }
+
+          let testBtn;
+          if (!reactionHasAny) {
+            const reactionName = esc(reaction.name);
+            testBtn = `<button class="test-btn" data-test="${esc(z.id)}" disabled title="Reaksjonssone «${reactionName}» har ingen lyd/video/lys.">▶ Test avskrekking</button>`
+              + `<div class="info-banner warn">Reaksjonssone «${reactionName}» har ingen enheter for avskrekking. Velg en annen reaksjonssone for å teste.</div>`;
+          } else if (reactionHasMedia) {
+            testBtn = `<button class="test-btn" data-test="${esc(z.id)}">▶ Test avskrekking fra denne sonen</button>`;
+          } else {
+            testBtn = `<button class="test-btn" data-test="${esc(z.id)}">▶ Test blink-avskrekking (kun lys, siste utvei)</button>`;
+          }
+
           return `<details class="zone-block" data-zone="${esc(z.id)}">`
-            + `<summary><span>${esc(z.name)}</span>${zoneStatusPill(z.id)}</summary>`
+            + `<summary><span>${esc(z.name)}${capBadges(z)}</span>${zoneStatusPill(z.id)}</summary>`
             + `<div class="zone-body">`
             + `<label>Reaksjonssone</label>`
             + `<select data-matrix="${esc(z.id)}"><option value="">— ingen —</option>${opts}</select>`
             + `<label>Kevin-modus</label>`
             + `<label style="justify-self:start;"><input type="checkbox" data-kevin="${esc(z.id)}" ${settings.kevin_zones[z.id] ? 'checked' : ''}> Inkluder i lys-simulering</label>`
-            + `<label>Lyd-URL</label>`
-            + `<input type="text" list="audio-suggestions" data-audio="${esc(z.id)}" value="${esc(audio)}" placeholder="standard sirene">`
-            + `<label>Video-URL</label>`
-            + `<input type="text" list="video-suggestions" data-video="${esc(z.id)}" value="${esc(video)}" placeholder="standard blålys">`
-            + `<button class="test-btn" data-test="${esc(z.id)}">▶ Test avskrekking fra denne sonen</button>`
+            + mediaFields
+            + testBtn
             + `</div></details>`;
         }).join('');
         document.querySelectorAll('[data-test]').forEach((btn) => {
+          if (btn.disabled) return;
           btn.addEventListener('click', async (ev) => {
             ev.preventDefault();
             const zoneId = btn.dataset.test;
@@ -726,6 +795,7 @@
         document.querySelectorAll('[data-audio]').forEach((i) => { if (i.value.trim()) payload.zone_audio_urls[i.dataset.audio] = i.value.trim(); });
         document.querySelectorAll('[data-video]').forEach((i) => { if (i.value.trim()) payload.zone_video_urls[i.dataset.video] = i.value.trim(); });
         await saveSettings(payload, $('btn-save-zones'), 'saved-toast-zones');
+        renderZoneBlocks();
       });
 
       (async () => {
