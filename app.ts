@@ -225,6 +225,10 @@ class McCallisterGuardApp extends Homey.App {
     try {
       await this.homey.flow.getTriggerCard(perTypeCard).trigger(baseTokens);
     } catch { /* best-effort */ }
+
+    this.media.startAlarmBlink().catch((err) => {
+      this.eventLog.add('warning', `Alarm-blink feilet: ${(err as Error).message}`);
+    });
   }
 
   private static readonly ALARM_TYPE_TRIGGER_CARD: Record<AlarmType, string> = {
@@ -256,6 +260,10 @@ class McCallisterGuardApp extends Homey.App {
     try {
       this.homey.flow.getTriggerCard(perTypeCard).trigger(baseTokens).catch(() => { /* best-effort */ });
     } catch { /* best-effort */ }
+
+    this.media.stopAlarmBlink().catch((err) => {
+      this.eventLog.add('warning', `Stopp alarm-blink feilet: ${(err as Error).message}`);
+    });
   }
 
   private static readonly ALARM_TYPE_STOPPED_CARD: Record<AlarmType, string> = {

@@ -36,9 +36,13 @@ export interface GuardSettings {
   entry_delay_sensors: string[];
   blink_on: ZoneSeconds;
   blink_off: ZoneSeconds;
+  alarm_blink_on: number;
+  alarm_blink_off: number;
 }
 
 export const DEFAULT_BLINK_SECONDS = 15;
+export const DEFAULT_ALARM_BLINK_ON = 1;
+export const DEFAULT_ALARM_BLINK_OFF = 1;
 
 export const DEFAULT_SETTINGS: GuardSettings = {
   bedtime: '23:30',
@@ -55,6 +59,8 @@ export const DEFAULT_SETTINGS: GuardSettings = {
   entry_delay_sensors: [],
   blink_on: {},
   blink_off: {},
+  alarm_blink_on: DEFAULT_ALARM_BLINK_ON,
+  alarm_blink_off: DEFAULT_ALARM_BLINK_OFF,
 };
 
 export const SETTINGS_KEYS = {

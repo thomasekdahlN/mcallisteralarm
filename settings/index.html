@@ -909,6 +909,8 @@
           ['exit_delay', 'Exit delay (s)', 'number'],
           ['entry_delay', 'Entry delay (s)', 'number'],
           ['escalation_minutes', 'Escalation time (min)', 'number'],
+          ['alarm_blink_on', 'Alarm blink on (s)', 'number'],
+          ['alarm_blink_off', 'Alarm blink off (s)', 'number'],
         ];
         $('settings-grid').innerHTML = fields.map(([k, label, t]) => `<label for="set_${k}">${label}</label>`
           + `<input id="set_${k}" type="${t}" value="${esc(settings[k] ?? '')}">`).join('');
@@ -954,7 +956,7 @@
       });
       $('btn-save').addEventListener('click', async () => {
         const payload = {};
-        ['bedtime', 'sunset_offset', 'random_min', 'random_max', 'deterrence_delay', 'exit_delay', 'entry_delay', 'escalation_minutes']
+        ['bedtime', 'sunset_offset', 'random_min', 'random_max', 'deterrence_delay', 'exit_delay', 'entry_delay', 'escalation_minutes', 'alarm_blink_on', 'alarm_blink_off']
           .forEach((k) => { const v = $('set_' + k).value; payload[k] = k === 'bedtime' ? v : Number(v); });
         await saveSettings(payload, $('btn-save'), 'saved-toast');
       });
