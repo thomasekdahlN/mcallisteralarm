@@ -3,6 +3,7 @@
   "version": "0.5.0",
   "scripts": {
     "build": "tsc",
+    "build:images": "bash scripts/build-app-images.sh",
     "lint": "eslint --ext .js,.ts --ignore-path .gitignore .",
     "test": "vitest run",
     "test:watch": "vitest"
