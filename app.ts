@@ -99,6 +99,23 @@ class McCallisterGuardApp extends Homey.App {
       const card = this.homey.flow.getTriggerCard('alarm_escalated');
       card.trigger({}).catch(() => { /* best-effort */ });
     });
+    this.cameras.onSnapshot((zoneId, _cameraId, cameraName) => {
+      const zoneName = this.zoneNameCache.get(zoneId) ?? zoneId;
+      const tokens = {
+        zone: zoneName,
+        sensor: cameraName,
+        sensor_type: 'camera',
+        mode: this.stateMachine.getMode(),
+        timestamp: new Date().toISOString(),
+      };
+      this.homey.flow.getTriggerCard('snapshot_taken').trigger(tokens)
+        .then(() => {
+          this.eventLog.add('info', `Flow-trigger «snapshot_taken» fyrt for ${cameraName} i sone ${zoneName}.`, zoneId);
+        })
+        .catch((err) => {
+          this.eventLog.add('warning', `Flow-trigger «snapshot_taken» feilet: ${(err as Error).message}`, zoneId);
+        });
+    });
 
     await this.registerFlowActions();
     await this.initListeners();

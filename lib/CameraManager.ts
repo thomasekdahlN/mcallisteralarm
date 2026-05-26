@@ -11,15 +11,24 @@ interface ZoneLoop {
   snapshotCount: number;
 }
 
+/** Called when a camera successfully captures a snapshot. */
+export type SnapshotListener = (zoneId: string, cameraId: string, cameraName: string) => void;
+
 export default class CameraManager {
 
   private loops = new Map<string, ZoneLoop>();
+  private listeners: SnapshotListener[] = [];
 
   constructor(
     private readonly homey: Homey,
     private readonly homeyApi: any,
     private readonly log: EventLog,
   ) { }
+
+  /** Register a listener that fires each time a snapshot is successfully captured. */
+  onSnapshot(listener: SnapshotListener): void {
+    this.listeners.push(listener);
+  }
 
   async startForZone(zoneId: string): Promise<void> {
     if (this.loops.has(zoneId)) return;
@@ -71,6 +80,10 @@ export default class CameraManager {
             excerpt: `📷 Snapshot fra ${camera.name || zoneId}`,
           });
           loop.pushCount += 1;
+        }
+
+        for (const listener of this.listeners) {
+          try { listener(zoneId, camera.id, camera.name || zoneId); } catch { /* best-effort */ }
         }
       } catch (err) {
         this.log.add('warning', `Snapshot-kall feilet: ${(err as Error).message}`, zoneId);
