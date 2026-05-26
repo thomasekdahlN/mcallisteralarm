@@ -11,7 +11,7 @@ McCallister Guard er ikke enda et passivt alarmsystem. I stedet for å bare tute
 - **Tre moduser** — `Hjemme` (deaktivert), `Borte` (full overvåking + Kevin-simulering), `Skallsikring` (kun valgte perimeter-sensorer aktive — typisk når du sover)
 - **Skallsikring med sensorvalg** — pek ut nøyaktig hvilke sensorer (ytterdører, vinduer, uteområder) som skal kunne utløse alarm ved Skallsikring; bevegelse innendørs ignoreres
 - **Sone-basert avskrekking** — bevegelse i én sone trigger media i en annen «reaksjonssone» (matrise konfigurerbar per sone), så tyven aldri møter responsen sin der hen er
-- **Avskrekkings-flow pr. sone (valgfritt)** — appen blinker alltid lys i reaksjonssonen som innebygd avskrekking. I tillegg fyrer den `deterrence_started`-triggeren slik at du fritt kan bygge en Homey-flow som spiller lyd/video/animasjoner via Chromecast, Sonos, Hue eller annet. Marker sonen som «har ekstern flow» i innstillingene så lar lys-vakta flowen din styre lyset i ro
+- **Konfigurerbar lys-avskrekking** — appen blinker lys i reaksjonssonen med en sakte syklus (PÅ/AV-tid konfigurerbar pr. sone, default 15 sek hver vei). Samtidig fyrer den `deterrence_started`-triggeren slik at du fritt kan bygge en Homey-flow som spiller lyd/video/animasjoner via Chromecast, Sonos, Hue eller annet
 - **Bundlede media som flow-tokens** — `deterrence_started`-triggeren leverer ferdige URL-tokens til alle medfølgende lyder (bjeffende vakthund, politisirene, brannalarm, …) og videoer (blålys, politi-silhuett, stor hund). Dra-og-slipp inn i `Cast a URL`/`Cast a video` på Chromecast eller Sonos uten å hoste filene selv
 - **Kevin-modus** — automatisk tilstedeværelses-simulering i Borte-modus (lys av/på i sannsynlig sekvens)
 - **Lys-autorisering** — manuell lysbruk under armert tilstand kan tolkes som «noen er hjemme» og deaktivere alarm
@@ -98,7 +98,7 @@ sequenceDiagram
     else Entry delay timer fyrer
       App->>F: trigger alarm_triggered(zone, sensor, type, mode)
       App->>DE: handleMotion(zoneId)
-      DE->>MC: startBlinkFallback paa reaksjonssonen (og fyrer deterrence_started-trigger)
+      DE->>MC: startBlink paa reaksjonssonen (og fyrer deterrence_started-trigger)
       App->>EM: start(escalation_minutes)
       Note over EM: Hvis fortsatt aktiv etter N min
       EM->>F: trigger alarm_escalated
@@ -180,14 +180,14 @@ homey app install
 4. **Skallsikring:** i hver sone vises et **Skallsikring**-felt med alle dør-/vindu- og bevegelses-sensorer
    i sonen. Hak av de sensorene som skal være aktive i Skallsikring-modus (typisk ytterdører, vinduer,
    uteområder). Andre sensorer ignoreres når Skallsikring er aktiv.
-5. **Avskrekkings-flow pr. sone (valgfritt):** appen blinker alltid lys i reaksjonssonen som innebygd
-   avskrekking. Vil du i tillegg spille av lyd/video på Chromecast, Sonos, Nest Hub e.l., bygger du selv en
-   Homey-flow i Flow-editoren som lytter på `Avskrekking startet i en sone` (`deterrence_started`-triggeren)
-   med filter på riktig `zone`. Triggeren leverer ferdige URL-tokens (`url_police_siren`, `url_guard_dog`,
-   `url_blue_lights`, …) som peker på bundlede lyd-/videofiler — dra dem rett inn i `Cast a URL`/`Cast a
-   video`-actions, så slipper du å hoste mediene selv. Når du har laget en slik flow, **kryss av «Jeg har
-   laget en ekstern flow»** på sonen i innstillingene; det forteller lys-vakta at flowen din får styre lyset
-   uten å bli «kjempet mot». Blink-fallbacken kjører i parallell uansett.
+5. **Lys-avskrekking pr. sone:** appen blinker lys i reaksjonssonen med en sakte PÅ/AV-syklus (default
+   15 sek hver vei, justerbart pr. sone under «Lys på (sek)» / «Lys av (sek)»). Vil du i tillegg spille av
+   lyd/video på Chromecast, Sonos, Nest Hub e.l., bygger du selv en Homey-flow i Flow-editoren som lytter på
+   `Avskrekking startet i en sone` (`deterrence_started`-triggeren) med filter på riktig `zone`. Triggeren
+   leverer ferdige URL-tokens (`url_police_siren`, `url_guard_dog`, `url_blue_lights`, …) som peker på
+   bundlede lyd-/videofiler — dra dem rett inn i `Cast a URL`/`Cast a video`-actions, så slipper du å hoste
+   mediene selv. Lys-vakta (`LightAuthGuard`) er deaktivert mens avskrekking pågår, så en ekstern flow kan
+   trygt styre lys i sonen samtidig.
 6. Sett **Borte-modus** når du forlater huset, eller bruk `set_mode`-actionen fra en flow (geofence, bryter,
    stemme). Bruk `mode_changed`-trigger til logging eller automatikk rundt modus-bytter.
 
@@ -272,13 +272,13 @@ Pivoten ble løsning A: **appen fyrer alltid `deterrence_started`-triggeren når
 1. `Avskrekking startet i en sone` med filter på riktig `zone`.
 2. Kjører `Cast a video` / `Cast a website` på Chromecast eller `Send key` på Samsung TV — gjerne med en av URL-tokenene triggeren leverer (`url_guard_dog`, `url_police_siren`, `url_blue_lights`, …) som peker på bundlede mediefiler som appen hoster lokalt.
 
-Innebygd fallback (`MediaCaster.startBlinkFallback` — strobing av lys-enheter i reaksjonssonen) **kjører alltid**, uavhengig av om en ekstern flow er konfigurert eller ikke. Dette gir et fornuftig system out-of-the-box og sikrer at brukeren får visuell avskrekking selv om Chromecast-en er offline, flowen er deaktivert eller URL-en feiler.
+Innebygd lys-avskrekking (`MediaCaster.startBlink` — sakte PÅ/AV-syklus på lys-enheter i reaksjonssonen, default 15 sek hver vei, konfigurerbart pr. sone) **kjører alltid** når avskrekking starter. Dette gir et fornuftig system out-of-the-box og sikrer at brukeren får visuell avskrekking selv om Chromecast-en er offline, flowen er deaktivert eller URL-en feiler.
 
-I innstillingene markerer brukeren bare **at en sone har en ekstern flow** (en avkrysningsboks). Vi kan ikke programmatisk velge eller trigge en spesifikk flow fra app-koden (se neste avsnitt), så en dropdown ville vært villedende. Avkrysningen brukes utelukkende til at lys-vakta (`LightAuthGuard`) lar være å «kjempe» mot lysendringer den eksterne flowen måtte gjøre i sonen.
+Mens avskrekking pågår, deaktiveres lys-vakta (`LightAuthGuard`) for reaksjonssonen, slik at en ekstern flow trygt kan styre lys i sonen parallelt med blinkingen uten å trigge «manuell lysbruk = noen er hjemme»-logikken.
 
 ### Konsekvenser for fremtidige Homey-apper
 
-Hvis du planlegger en app som trenger å styre tredjepartsenheter (særlig media) via deres «pene» flow-actions: regn med at du **må** bygge oppskriften rundt at brukeren oppretter en flow selv. Et trigger-kort fra din egen app er den eneste pålitelige broen til andre apper. Dokumenter dette tydelig i UI-en — vi har lagt inn en «Jeg har laget en ekstern flow»-avkrysning pr. sone med hjelpetekst direkte i Soneoversikten.
+Hvis du planlegger en app som trenger å styre tredjepartsenheter (særlig media) via deres «pene» flow-actions: regn med at du **må** bygge oppskriften rundt at brukeren oppretter en flow selv. Et trigger-kort fra din egen app er den eneste pålitelige broen til andre apper. Dokumenter dette tydelig i UI-en.
 
 ## Begrensninger i Homey-plattformen — funksjoner vi har måttet fjerne eller delegere
 
@@ -294,9 +294,10 @@ Underveis har vi ryddet bort funksjonalitet som **virket riktig på papiret, men
 | **HomeyScript-bro for å kalle tredjepartsappers actions** (`homey.flow.runFlowCardAction({ uri, id, args })`) | Selv HomeyScript med fulle bruker-scopes returnerer `Not Found: FlowCardAction with ID …` på alle 1044 testede uri/id-kombinasjoner mot Chromecast/Samsung. Funksjonen er praksis dead-end for custom apper. | Forkastet. Trigger-kort + bruker-flow er den eneste fungerende broen. |
 | **Bruke `speaker_playing`-capability for å resume cast-sesjon** | Kun å resume en eksisterende sesjon, ikke å velge URL/innhold. Ubrukelig for å starte en avskrekking. | Forkastet. |
 | **Embedde `castv2-client` / Tizen-protokoll direkte i appen** | Krever IP-discovery (vi har bare Homey-device-ID), parallell vedlikehold når Google/Samsung endrer protokollen, separat implementasjon pr. plattform — bryter Athoms anbefalte arkitektur. | Vurdert og forkastet. Ikke verdt det. |
-| **Cast-skjermer-info-banner pr. sone** (advarsel om at oppdaget skjerm ikke støtter direkte cast) | Ble misvisende — vi sa «bruk en Homey-flow» uten å gi brukeren noe sted å klikke. | Fjernet og erstattet med avkrysning for «Jeg har laget en ekstern flow» direkte i sonen. |
-| **Programmatisk velge / kjøre en spesifikk Homey-flow fra app-kode** (per-sone dropdown med flow-ID som ble lagret i `deterrent_flows`) | Det finnes **ingen `runFlow(flowId)`-API for tredjepartsapper** på Homey. `homey.flow.getFlows()` er `readonly`, og det finnes ingen imperativ måte å fyre en valgt flow fra koden. Vi kunne lagre en flow-ID brukeren valgte, men aldri faktisk bruke den til noe. | Erstattet dropdown med en boolean-avkrysning («ekstern flow finnes for denne sonen»). Appen fyrer kun `deterrence_started`-triggeren — brukerens flow lytter selv. `getFlows`-API-endepunktet (`/flows`) er fjernet. Eksisterende string-verdier i `deterrent_flows` migreres automatisk til `true` ved første lasting. |
-| **Auto-skippe blink-fallback når en ekstern avskrekkings-flow var konfigurert** | Vi prøvde å «la flowen overta» og slå av vår egen lysblinking. Problemet er at vi ikke kan vite om flowen faktisk plukket opp triggeren, om brukeren har deaktivert den, eller om Chromecast-en svarer. Skip-en betød ofte ingen avskrekking i det hele tatt. | Blink-fallbacken kjører **alltid** når avskrekking starter, parallelt med en eventuell ekstern flow. Avkrysningen brukes nå kun til at `LightAuthGuard` ikke «kjemper» mot lysendringer flowen måtte gjøre. |
+| **Cast-skjermer-info-banner pr. sone** (advarsel om at oppdaget skjerm ikke støtter direkte cast) | Ble misvisende — vi sa «bruk en Homey-flow» uten å gi brukeren noe sted å klikke. | Fjernet. `deterrence_started`-triggeren er det offisielle integrasjonspunktet for brukerens egne flows. |
+| **Programmatisk velge / kjøre en spesifikk Homey-flow fra app-kode** (per-sone dropdown med flow-ID som ble lagret i `deterrent_flows`) | Det finnes **ingen `runFlow(flowId)`-API for tredjepartsapper** på Homey. `homey.flow.getFlows()` er `readonly`, og det finnes ingen imperativ måte å fyre en valgt flow fra koden. | Helt fjernet. Appen fyrer kun `deterrence_started`-triggeren — brukerens flow lytter selv. `getFlows`-API-endepunktet (`/flows`) er fjernet. |
+| **«Jeg har laget en ekstern flow»-avkrysning pr. sone** (boolean i `deterrent_flows`) | Avkrysningen styrte kun om `LightAuthGuard` skulle «la flowen overta» lyset. I praksis var dette unødvendig kompleksitet: lys-vakta er uansett deaktivert mens avskrekking pågår, så en parallell flow kan trygt styre lys uansett. | Fjernet. Innstillingene har nå kun «Lys på (sek)» / «Lys av (sek)» pr. sone for å justere blink-tempoet (default 15/15). `deterrent_flows`-feltet er borte; gamle verdier ignoreres. |
+| **600 ms strobing** | Tidligere blinket lysene 600 ms av/på som en politilys-effekt. Det fungerte teknisk, men ga ofte hørbar klikke-lyd i relébaserte enheter, akselererte slitasje på Hue/IKEA-pærer og gjorde at noen sone-til-zigbee-broer droppet kommandoer pga. trafikk. | Erstattet med en sakte PÅ/AV-syklus styrt av `blink_on`/`blink_off` pr. sone (default 15 sek hver vei, justerbart i Soneoversikten). |
 | **«Blinke med alle enheter som har `onoff`»** | Tidligere filter krevde bare `onoff`-capability + ikke-sensor. Resultatet var at varmekabler, panelovner, frysere, smartplugger, vifter og TV-er ble forsøkt strobet under avskrekking — uønsket og potensielt skadelig. | Strikt filter: `isLight()` krever nå `device.class === 'light'` i tillegg til `onoff`. Brukt konsekvent i `MediaCaster.startLightStrobe`/`stopZone`, `SimulationEngine` (Kevin-syklus), `LightAuthGuard.handleOnOffChange`, og listener-registrering i `app.ts`. Hvis en smartplugg skal kunne brukes som lys (f.eks. juletre), endre `class` til `light` i Homey-enhetens innstillinger. |
 | **Snapshot-loop i alle soner med bevegelse** | `CameraManager.startForZone()` startet et `setInterval` i hver sone det var bevegelse i, og filtrerte først ut kamera-enheter på hvert tick. Resultatet var bortkastet planlegging og loop-logg-støy i soner uten kameraer. | `startForZone()` slår nå opp `isCamera(d)` på sonens enheter først og hopper helt over loopen hvis ingen kameraer finnes. Loggen sier «Snapshot-loop hoppes over: ingen kameraer i sone X». |
 

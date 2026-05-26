@@ -435,7 +435,7 @@
 
   <section class="tab-panel" id="tab-zones">
     <div class="info-banner">Klikk på en sone for å sette reaksjonssone (sone-matrise), Kevin-modus,
-      avskrekkings-flow, og for å teste oppsettet.</div>
+      blink-tider, og for å teste oppsettet.</div>
     <div id="zones"></div>
     <div style="margin-top:16px;">
       <button class="save-btn" id="btn-save-zones">Lagre sone-innstillinger</button>
@@ -653,34 +653,28 @@
       }
 
       function capBadges(z) {
-        const parts = [];
-        const audioList = (z.audioDevices || []).join(', ') || 'ingen';
-        const videoList = (z.videoDevices || []).join(', ') || 'ingen';
+        if (!settings.kevin_zones?.[z.id]) return '';
         const lightList = (z.lightDevices || []).join(', ') || 'ingen';
-        if (z.hasAudio) parts.push(`<span title="Høyttalere: ${esc(audioList)}">🔊</span>`);
-        if (z.hasVideo) parts.push(`<span title="Skjermer: ${esc(videoList)}">📺</span>`);
-        if (z.hasLights) parts.push(`<span title="Lys: ${esc(lightList)}">💡</span>`);
-        return parts.length ? `<span class="cap-badges">${parts.join('')}</span>` : '';
+        return `<span class="cap-badges"><span title="Kevin-modus aktiv – lys: ${esc(lightList)}">💡</span></span>`;
       }
 
       function renderZoneBlocks() {
         if (!zones.length) { $('zones').innerHTML = '<em>Ingen soner funnet.</em>'; return; }
         const byId = Object.fromEntries(zones.map((z) => [z.id, z]));
+        const blinkOn = settings.blink_on || {};
+        const blinkOff = settings.blink_off || {};
         $('zones').innerHTML = zones.map((z) => {
           const opts = zones.map((r) => `<option value="${esc(r.id)}" ${settings.zone_matrix[z.id] === r.id ? 'selected' : ''}>${esc(r.name)}</option>`).join('');
           const reactionId = settings.zone_matrix[z.id] || z.id;
           const reaction = byId[reactionId] || z;
-          const deterrentFlows = settings.deterrent_flows || {};
-          const hasExternalFlow = !!deterrentFlows[z.id];
-          const reactionHasAny = !!deterrentFlows[reactionId] || reaction.hasLights;
 
           let testBtn;
-          if (!reactionHasAny) {
+          if (!reaction.hasLights) {
             const reactionName = esc(reaction.name);
-            testBtn = `<button class="test-btn" data-test="${esc(z.id)}" disabled title="Reaksjonssone «${reactionName}» har ingen lys og ingen ekstern flow.">▶ Test avskrekking</button>`
-              + `<div class="info-banner warn">Reaksjonssone «${reactionName}» har verken lys eller ekstern avskrekkings-flow. Velg en annen reaksjonssone for å teste.</div>`;
+            testBtn = `<button class="test-btn" data-test="${esc(z.id)}" disabled title="Reaksjonssone «${reactionName}» har ingen lys.">▶ Test avskrekking</button>`
+              + `<div class="info-banner warn">Reaksjonssone «${reactionName}» har ingen lys. Velg en annen reaksjonssone for å teste.</div>`;
           } else {
-            testBtn = `<button class="test-btn" data-test="${esc(z.id)}">▶ Test avskrekking (blink + evt. flow)</button>`;
+            testBtn = `<button class="test-btn" data-test="${esc(z.id)}">▶ Test avskrekking</button>`;
           }
 
           const perimeterSet = new Set(settings.perimeter_sensors || []);
@@ -699,10 +693,12 @@
             sensorBlock = `<label>Skallsikring</label><div class="sensor-empty">Ingen dør/vindu- eller bevegelses-sensorer i denne sonen.</div>`;
           }
 
-          const flowBlock = `<label>Ekstern avskrekkings-flow</label>`
-            + `<label style="justify-self:start;"><input type="checkbox" data-deter-flow="${esc(z.id)}" ${hasExternalFlow ? 'checked' : ''}>`
-            + ` Jeg har laget en Homey-flow som lytter på «McCallister Guard – Avskrekking startet» for denne sonen.</label>`
-            + `<div class="info-banner">Blinkende lys kjører alltid som fallback. Krysser du av her, vet appen at en ekstern flow også tar over (lyd/video/animasjoner) og lar være å «kjempe» mot lysendringer den gjør.</div>`;
+          const onSec = Number.isFinite(blinkOn[z.id]) ? blinkOn[z.id] : 15;
+          const offSec = Number.isFinite(blinkOff[z.id]) ? blinkOff[z.id] : 15;
+          const blinkBlock = `<label>Lys på (sek)</label>`
+            + `<input type="number" min="1" step="1" data-blink-on="${esc(z.id)}" value="${onSec}" style="width:120px;">`
+            + `<label>Lys av (sek)</label>`
+            + `<input type="number" min="1" step="1" data-blink-off="${esc(z.id)}" value="${offSec}" style="width:120px;">`;
 
           return `<details class="zone-block" data-zone="${esc(z.id)}">`
             + `<summary><span>${esc(z.name)}${capBadges(z)}</span>${zoneStatusPill(z.id)}</summary>`
@@ -711,8 +707,8 @@
             + `<select data-matrix="${esc(z.id)}"><option value="">— ingen —</option>${opts}</select>`
             + `<label>Kevin-modus</label>`
             + `<label style="justify-self:start;"><input type="checkbox" data-kevin="${esc(z.id)}" ${settings.kevin_zones[z.id] ? 'checked' : ''}> Lys-simulering</label>`
+            + blinkBlock
             + sensorBlock
-            + flowBlock
             + testBtn
             + `</div></details>`;
         }).join('');
@@ -811,12 +807,19 @@
       });
       $('btn-save-zones').addEventListener('click', async () => {
         const payload = {
-          kevin_zones: {}, zone_matrix: {}, perimeter_sensors: [], deterrent_flows: {},
+          kevin_zones: {}, zone_matrix: {}, perimeter_sensors: [], blink_on: {}, blink_off: {},
         };
         document.querySelectorAll('[data-kevin]').forEach((c) => { payload.kevin_zones[c.dataset.kevin] = c.checked; });
         document.querySelectorAll('[data-matrix]').forEach((s) => { if (s.value) payload.zone_matrix[s.dataset.matrix] = s.value; });
         document.querySelectorAll('[data-perimeter]:checked').forEach((c) => { payload.perimeter_sensors.push(c.dataset.perimeter); });
-        document.querySelectorAll('[data-deter-flow]').forEach((c) => { if (c.checked) payload.deterrent_flows[c.dataset.deterFlow] = true; });
+        document.querySelectorAll('[data-blink-on]').forEach((i) => {
+          const v = Math.max(1, Number(i.value) || 15);
+          payload.blink_on[i.dataset.blinkOn] = v;
+        });
+        document.querySelectorAll('[data-blink-off]').forEach((i) => {
+          const v = Math.max(1, Number(i.value) || 15);
+          payload.blink_off[i.dataset.blinkOff] = v;
+        });
         await saveSettings(payload, $('btn-save-zones'), 'saved-toast-zones');
         renderZoneBlocks();
       });

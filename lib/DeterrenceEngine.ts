@@ -65,10 +65,8 @@ export default class DeterrenceEngine {
       await this.media.stopZone(this.activeDeterrenceZone);
     }
     this.activeDeterrenceZone = zoneId;
-    const hasExternalFlow = !!this.getSettings().deterrent_flows?.[zoneId];
-    const suffix = hasExternalFlow ? ' + ekstern flow' : '';
-    this.log.add('alarm', `Direkte avskrekking i sone ${zoneId} (test) – blinkende lys${suffix}.`, zoneId);
-    await this.media.startBlinkFallback(zoneId);
+    this.log.add('alarm', `Direkte avskrekking i sone ${zoneId} (test).`, zoneId);
+    await this.media.startBlink(zoneId);
     for (const listener of this.listeners) {
       try { listener(zoneId, zoneId); } catch { /* best-effort */ }
     }
@@ -89,10 +87,8 @@ export default class DeterrenceEngine {
 
   private async execute(reactionZoneId: string, motionZoneId: string): Promise<void> {
     this.activeDeterrenceZone = reactionZoneId;
-    const hasExternalFlow = !!this.getSettings().deterrent_flows?.[reactionZoneId];
-    const suffix = hasExternalFlow ? ' + ekstern flow' : '';
-    this.log.add('alarm', `Avskrekking startet i sone ${reactionZoneId} (tyv i ${motionZoneId}) – blinkende lys${suffix}.`, reactionZoneId);
-    await this.media.startBlinkFallback(reactionZoneId);
+    this.log.add('alarm', `Avskrekking startet i sone ${reactionZoneId} (tyv i ${motionZoneId}).`, reactionZoneId);
+    await this.media.startBlink(reactionZoneId);
 
     for (const listener of this.listeners) {
       try { listener(reactionZoneId, motionZoneId); } catch { /* best-effort */ }

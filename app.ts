@@ -65,7 +65,7 @@ class McCallisterGuardApp extends Homey.App {
     );
     this.stateMachine = new StateMachine(this.homey, this.eventLog);
     this.lightAuth = new LightAuthGuard(this.homeyApi, this.eventLog);
-    this.media = new MediaCaster(this.homey, this.homeyApi, this.eventLog, this.lightAuth);
+    this.media = new MediaCaster(this.homey, this.homeyApi, this.eventLog, this.lightAuth, () => this.getSettings());
     this.deterrence = new DeterrenceEngine(this.homey, this.eventLog, this.media, () => this.getSettings());
     this.falseAlarm = new FalseAlarmFilter();
     this.escalation = new EscalationManager(this.homey, this.homeyApi, this.eventLog, this.lightAuth);
@@ -75,10 +75,7 @@ class McCallisterGuardApp extends Homey.App {
     this.lightAuth.setActivePredicate(() => {
       if (this.stateMachine.getMode() === 'disarmed') return false;
       if (this.isTestActive()) return false;
-      const activeZone = this.deterrence.getActiveZone();
-      if (!activeZone) return false;
-      if (this.getSettings().deterrent_flows?.[activeZone]) return false;
-      return true;
+      return this.deterrence.getActiveZone() === null;
     });
 
     this.stateMachine.onModeChange((next, previous) => this.handleModeChange(next, previous));
@@ -105,13 +102,7 @@ class McCallisterGuardApp extends Homey.App {
 
   getSettings(): GuardSettings {
     const stored = this.homey.settings.get(SETTINGS_KEYS.SETTINGS);
-    const merged: GuardSettings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
-    const flows: Record<string, boolean> = {};
-    for (const [zoneId, value] of Object.entries(merged.deterrent_flows ?? {})) {
-      if (value) flows[zoneId] = true;
-    }
-    merged.deterrent_flows = flows;
-    return merged;
+    return { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
   }
 
   getMediaTokens(): Record<string, string> {

@@ -4,10 +4,10 @@ import type Homey from 'homey/lib/Homey';
 import type EventLog from './EventLog';
 import type LightAuthGuard from './LightAuthGuard';
 import { isLight } from './Capabilities';
+import { DEFAULT_BLINK_SECONDS, GuardSettings } from './types';
 
 const BLUE_HUE = 0.66;
 const RED_HUE = 0.0;
-const STROBE_INTERVAL_MS = 600;
 
 interface ZoneTask {
   stop: () => Promise<void>;
@@ -22,9 +22,10 @@ export default class MediaCaster {
     private readonly homeyApi: any,
     private readonly log: EventLog,
     private readonly lightAuth: LightAuthGuard,
+    private readonly getSettings: () => GuardSettings,
   ) { }
 
-  async startBlinkFallback(zoneId: string): Promise<void> {
+  async startBlink(zoneId: string): Promise<void> {
     await this.stopZone(zoneId);
     const devices = await this.zoneDevices(zoneId);
     await this.startLightStrobe(zoneId, devices, [BLUE_HUE, RED_HUE]);
@@ -56,8 +57,17 @@ export default class MediaCaster {
       this.log.add('warning', `Ingen lys å blinke i sone ${zoneId}.`, zoneId);
       return;
     }
+    const settings = this.getSettings();
+    const onSec = Math.max(1, settings.blink_on?.[zoneId] ?? DEFAULT_BLINK_SECONDS);
+    const offSec = Math.max(1, settings.blink_off?.[zoneId] ?? DEFAULT_BLINK_SECONDS);
+    const onMs = onSec * 1000;
+    const offMs = offSec * 1000;
+
     let idx = 0;
-    const interval = this.homey.setInterval(async () => {
+    let stopped = false;
+    let timer: NodeJS.Timeout | null = null;
+
+    const turnOn = async (): Promise<void> => {
       const hue = hues[idx % hues.length] ?? BLUE_HUE;
       idx += 1;
       for (const light of lights) {
@@ -75,13 +85,36 @@ export default class MediaCaster {
           }
         } catch { /* best-effort */ }
       }
-    }, STROBE_INTERVAL_MS);
+    };
+
+    const turnOff = async (): Promise<void> => {
+      for (const light of lights) {
+        try {
+          this.lightAuth.registerOwnCommand(light.id, false);
+          await light.setCapabilityValue({ capabilityId: 'onoff', value: false });
+        } catch { /* best-effort */ }
+      }
+    };
+
+    const cycle = async (): Promise<void> => {
+      if (stopped) return;
+      await turnOn();
+      timer = this.homey.setTimeout(async () => {
+        if (stopped) return;
+        await turnOff();
+        timer = this.homey.setTimeout(cycle, offMs);
+      }, onMs);
+    };
+
+    cycle().catch(() => { /* best-effort */ });
+
     this.active.set(zoneId, {
       stop: async () => {
-        this.homey.clearInterval(interval);
+        stopped = true;
+        if (timer) this.homey.clearTimeout(timer);
       },
     });
-    this.log.add('info', `Starter blinkende lys (fallback) i sone ${zoneId}.`, zoneId);
+    this.log.add('info', `Starter blinkende lys i sone ${zoneId} (${onSec}s på / ${offSec}s av).`, zoneId);
   }
 
   private async zoneDevices(zoneId: string): Promise<any[]> {

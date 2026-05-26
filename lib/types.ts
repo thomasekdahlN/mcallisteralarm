@@ -17,6 +17,8 @@ export type ZoneMatrix = Record<string, string>;
 
 export type KevinZones = Record<string, boolean>;
 
+export type ZoneSeconds = Record<string, number>;
+
 export interface GuardSettings {
   bedtime: string;
   sunset_offset: number;
@@ -29,8 +31,11 @@ export interface GuardSettings {
   zone_matrix: ZoneMatrix;
   kevin_zones: KevinZones;
   perimeter_sensors: string[];
-  deterrent_flows: Record<string, boolean>;
+  blink_on: ZoneSeconds;
+  blink_off: ZoneSeconds;
 }
+
+export const DEFAULT_BLINK_SECONDS = 15;
 
 export const DEFAULT_SETTINGS: GuardSettings = {
   bedtime: '23:30',
@@ -44,7 +49,8 @@ export const DEFAULT_SETTINGS: GuardSettings = {
   zone_matrix: {},
   kevin_zones: {},
   perimeter_sensors: [],
-  deterrent_flows: {},
+  blink_on: {},
+  blink_off: {},
 };
 
 export const SETTINGS_KEYS = {
