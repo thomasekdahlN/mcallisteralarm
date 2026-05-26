@@ -115,6 +115,18 @@
             }
           },
           {
+            "name": "alarm_type",
+            "type": "string",
+            "title": {
+              "en": "Alarm type",
+              "no": "Alarmtype"
+            },
+            "example": {
+              "en": "perimeter",
+              "no": "perimeter"
+            }
+          },
+          {
             "name": "reason",
             "type": "string",
             "title": {
@@ -135,8 +147,8 @@
           "no": "Alarm utløst"
         },
         "hint": {
-          "en": "Fires when a sensor trips the alarm while the system is armed. Use this to send notifications.",
-          "no": "Utløses når en sensor aktiverer alarmen mens systemet er armert. Bruk denne til å sende varslinger."
+          "en": "Fires when a sensor trips the alarm while the system is armed. The alarm_type token is one of: perimeter (skin breach in armed_stay), intrusion (interior motion in armed_away), entry_delay_timeout (entry-delay sensor not disarmed in time), panic (manual). Use it together with the alarm_type_is condition to branch on alarm class.",
+          "no": "Utløses når en sensor aktiverer alarmen mens systemet er armert. alarm_type-tokenet er én av: perimeter (skall-brudd i armed_stay), intrusion (innendørs bevegelse i armed_away), entry_delay_timeout (inngangsforsinkelse ikke deaktivert i tide), panic (manuell). Kombiner med vilkåret «Alarmtype er» for å forgrene på alarmklasse."
         },
         "tokens": [
           {
@@ -173,6 +185,18 @@
             "example": {
               "en": "motion",
               "no": "bevegelse"
+            }
+          },
+          {
+            "name": "alarm_type",
+            "type": "string",
+            "title": {
+              "en": "Alarm type",
+              "no": "Alarmtype"
+            },
+            "example": {
+              "en": "perimeter",
+              "no": "perimeter"
             }
           },
           {
@@ -382,6 +406,57 @@
           "no": "Sann når en alarm er utløst akkurat nå (uavhengig av modus)."
         },
         "id": "alarm_active"
+      },
+      {
+        "title": {
+          "en": "Alarm type !{{is|is not}} [[alarm_type]]",
+          "no": "Alarmtype !{{er|er ikke}} [[alarm_type]]"
+        },
+        "titleFormatted": {
+          "en": "Alarm type !{{is|is not}} [[alarm_type]]",
+          "no": "Alarmtype !{{er|er ikke}} [[alarm_type]]"
+        },
+        "hint": {
+          "en": "Checks the type of the currently active alarm. False when no alarm is active. Combine with the «Alarm triggered» card to branch behavior per alarm class.",
+          "no": "Sjekker hvilken type alarm som er aktiv nå. Usann når ingen alarm er aktiv. Kombiner med «Alarm utløst»-kortet for å forgrene på alarmtype."
+        },
+        "args": [
+          {
+            "name": "alarm_type",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "perimeter",
+                "label": {
+                  "en": "Perimeter breach (Skallsikring)",
+                  "no": "Skallsikring-brudd"
+                }
+              },
+              {
+                "id": "intrusion",
+                "label": {
+                  "en": "Intrusion (interior, armed_away)",
+                  "no": "Innbrudd (innendørs, Borte)"
+                }
+              },
+              {
+                "id": "entry_delay_timeout",
+                "label": {
+                  "en": "Entry delay timeout (front door not disarmed)",
+                  "no": "Inngangsforsinkelse utløpt (hoveddør ikke deaktivert)"
+                }
+              },
+              {
+                "id": "panic",
+                "label": {
+                  "en": "Panic (manual)",
+                  "no": "Panikk (manuell)"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "alarm_type_is"
       },
       {
         "title": {
