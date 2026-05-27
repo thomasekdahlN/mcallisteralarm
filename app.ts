@@ -82,7 +82,7 @@ class McCallisterGuardApp extends Homey.App {
     this.deterrence.onDeterrenceStarted((reactionZoneId, motionZoneId) => {
       const reactionName = this.zoneNameCache.get(reactionZoneId) ?? reactionZoneId;
       const motionName = this.zoneNameCache.get(motionZoneId) ?? motionZoneId;
-      this.pushTimeline(`🔔 Avskrekking startet i ${reactionName} (bevegelse i ${motionName}).`);
+      this.pushTimeline(`Avskrekking startet i ${reactionName} (bevegelse i ${motionName}).`);
       const card = this.homey.flow.getTriggerCard('deterrence_started');
       const tokenCount = Object.keys(this.mediaTokens).length;
       card.trigger({ zone: reactionZoneId, ...this.mediaTokens })
@@ -94,7 +94,7 @@ class McCallisterGuardApp extends Homey.App {
         });
     });
     this.escalation.onCrisis(() => {
-      this.pushTimeline('🚨 KRITISK: Avskrekking feilet — full eskalering (sirener + strobe).');
+      this.pushTimeline('KRITISK: Avskrekking feilet — full eskalering (sirener + strobe).');
       const card = this.homey.flow.getTriggerCard('alarm_escalated');
       card.trigger({}).catch(() => { /* best-effort */ });
     });
@@ -160,6 +160,7 @@ class McCallisterGuardApp extends Homey.App {
   }
 
   async setMode(mode: Mode): Promise<void> {
+    if (this.stateMachine.getMode() === mode && !this.stateMachine.isExitDelayActive()) return;
     const settings = this.getSettings();
     if (mode === 'disarmed') {
       this.clearTestStopTimer();
@@ -198,6 +199,11 @@ class McCallisterGuardApp extends Homey.App {
     return this.alarmActive;
   }
 
+  setCameraMotionEnabled(enabled: boolean): void {
+    this.saveSettings({ camera_motion_enabled: enabled });
+    this.eventLog.add('info', `Bevegelsesbilder ${enabled ? 'aktivert' : 'deaktivert'}.`);
+  }
+
   getRecentMotionZones(): string[] {
     const cutoff = Date.now() - McCallisterGuardApp.MOTION_RECENT_MS;
     const result: string[] = [];
@@ -225,7 +231,7 @@ class McCallisterGuardApp extends Homey.App {
       zoneId, zoneName, deviceId, deviceName, sensorType, alarmType,
     };
     this.eventLog.add('alarm', `ALARM utløst i ${zoneName} (sensor: ${deviceName}, type: ${sensorType}, alarm: ${alarmType}).`, zoneId, deviceId);
-    this.pushTimeline(`🚨 ALARM utløst i ${zoneName} (${alarmType} · ${sensorType}: ${deviceName}).`);
+    this.pushTimeline(`ALARM utløst i ${zoneName} (${alarmType} · ${sensorType}: ${deviceName}).`);
 
     const baseTokens = {
       zone: zoneName,
@@ -261,7 +267,7 @@ class McCallisterGuardApp extends Homey.App {
     const ctx = this.alarmContext;
     this.alarmActive = false;
     this.alarmContext = null;
-    this.pushTimeline(`✅ Alarm stoppet${ctx?.zoneName ? ` (sone: ${ctx.zoneName})` : ''} — ${reason}`);
+    this.pushTimeline(`Alarm stoppet${ctx?.zoneName ? ` (sone: ${ctx.zoneName})` : ''} — ${reason}`);
 
     const alarmType = ctx?.alarmType ?? 'intrusion';
     const baseTokens = {
@@ -347,7 +353,7 @@ class McCallisterGuardApp extends Homey.App {
     if (next !== 'disarmed' && previous === 'disarmed') {
       this.runHealthCheck().catch(() => { /* best-effort */ });
     }
-    this.pushTimeline(`🛡️ McCallister Guard: ${this.modeLabel(previous)} → ${this.modeLabel(next)}`);
+    this.pushTimeline(`McCallister Guard: ${this.modeLabel(next)}`);
     try {
       this.homey.flow.getTriggerCard('mode_changed').trigger({
         mode_new: next,
@@ -386,6 +392,11 @@ class McCallisterGuardApp extends Homey.App {
     this.homey.flow.getActionCard('trigger_panic')
       .registerRunListener(async () => {
         await this.triggerPanic();
+        return true;
+      });
+    this.homey.flow.getActionCard('set_camera_motion')
+      .registerRunListener(async (args: { enabled: 'enable' | 'disable' }) => {
+        this.setCameraMotionEnabled(args.enabled === 'enable');
         return true;
       });
     this.homey.flow.getConditionCard('is_armed')

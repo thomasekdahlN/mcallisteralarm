@@ -35,6 +35,8 @@ export default class CameraManager {
    */
   async captureMotionBurst(zoneId: string, isAlarm: boolean): Promise<void> {
     const settings = this.getSettings();
+    // Respect the global master switch for motion snapshots when no alarm is active.
+    if (!isAlarm && settings.camera_motion_enabled === false) return;
     const cameras = await this.zoneCameras(zoneId);
     if (cameras.length === 0) return;
 
@@ -74,10 +76,6 @@ export default class CameraManager {
         } catch {
           (stream as NodeJS.WritableStream & { end: () => void }).end();
         }
-      });
-
-      await this.homey.notifications.createNotification({
-        excerpt: `📷 Snapshot fra ${camera.name || zoneId}`,
       });
 
       for (const listener of this.listeners) {
