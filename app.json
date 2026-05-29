@@ -75,159 +75,12 @@
     "triggers": [
       {
         "title": {
-          "en": "Alarm stopped",
-          "no": "Alarm avsluttet"
-        },
-        "hint": {
-          "en": "Fires when any active alarm is stopped (by the user, by disarming, or automatically). For type-specific reactions use the dedicated cards: alarm_stopped_perimeter, alarm_stopped_intrusion, alarm_stopped_entry_delay or alarm_stopped_panic.",
-          "no": "Utløses når en aktiv alarm stoppes (av bruker, ved deaktivering eller automatisk). For type-spesifikke reaksjoner bruk de dedikerte kortene: alarm_stopped_perimeter, alarm_stopped_intrusion, alarm_stopped_entry_delay eller alarm_stopped_panic."
-        },
-        "tokens": [
-          {
-            "name": "zone",
-            "type": "string",
-            "title": {
-              "en": "Zone (that triggered)",
-              "no": "Sone (som utløste)"
-            },
-            "example": {
-              "en": "Living room",
-              "no": "Stua"
-            }
-          },
-          {
-            "name": "sensor",
-            "type": "string",
-            "title": {
-              "en": "Sensor (that triggered)",
-              "no": "Sensor (som utløste)"
-            },
-            "example": {
-              "en": "Motion sensor (hallway)",
-              "no": "Bevegelsessensor (gang)"
-            }
-          },
-          {
-            "name": "reason",
-            "type": "string",
-            "title": {
-              "en": "Reason",
-              "no": "Årsak"
-            },
-            "example": {
-              "en": "User stopped alarm",
-              "no": "Bruker stoppet alarm"
-            }
-          }
-        ],
-        "id": "alarm_stopped"
-      },
-      {
-        "title": {
-          "en": "Entry delay timeout alarm stopped",
-          "no": "Inngangsforsinkelse-alarm avsluttet"
-        },
-        "hint": {
-          "en": "Fires when an entry-delay-timeout alarm is stopped — by the user, by disarming, or automatically.",
-          "no": "Utløses når en inngangsforsinkelse-alarm stoppes — av bruker, ved deaktivering eller automatisk."
-        },
-        "tokens": [
-          {
-            "name": "zone",
-            "type": "string",
-            "title": {
-              "en": "Zone (that triggered)",
-              "no": "Sone (som utløste)"
-            },
-            "example": {
-              "en": "Hallway",
-              "no": "Gang"
-            }
-          },
-          {
-            "name": "sensor",
-            "type": "string",
-            "title": {
-              "en": "Sensor (that triggered)",
-              "no": "Sensor (som utløste)"
-            },
-            "example": {
-              "en": "Front door",
-              "no": "Hoveddør"
-            }
-          },
-          {
-            "name": "reason",
-            "type": "string",
-            "title": {
-              "en": "Reason",
-              "no": "Årsak"
-            },
-            "example": {
-              "en": "User stopped alarm",
-              "no": "Bruker stoppet alarm"
-            }
-          }
-        ],
-        "id": "alarm_stopped_entry_delay"
-      },
-      {
-        "title": {
-          "en": "Intrusion alarm stopped",
-          "no": "Innbruddsalarm avsluttet"
-        },
-        "hint": {
-          "en": "Fires when an interior intrusion alarm (armed_away) is stopped — by the user, by disarming, or automatically.",
-          "no": "Utløses når en innendørs innbruddsalarm (Borte) stoppes — av bruker, ved deaktivering eller automatisk."
-        },
-        "tokens": [
-          {
-            "name": "zone",
-            "type": "string",
-            "title": {
-              "en": "Zone (that triggered)",
-              "no": "Sone (som utløste)"
-            },
-            "example": {
-              "en": "Living room",
-              "no": "Stua"
-            }
-          },
-          {
-            "name": "sensor",
-            "type": "string",
-            "title": {
-              "en": "Sensor (that triggered)",
-              "no": "Sensor (som utløste)"
-            },
-            "example": {
-              "en": "Motion sensor (hallway)",
-              "no": "Bevegelsessensor (gang)"
-            }
-          },
-          {
-            "name": "reason",
-            "type": "string",
-            "title": {
-              "en": "Reason",
-              "no": "Årsak"
-            },
-            "example": {
-              "en": "User stopped alarm",
-              "no": "Bruker stoppet alarm"
-            }
-          }
-        ],
-        "id": "alarm_stopped_intrusion"
-      },
-      {
-        "title": {
           "en": "Perimeter breach alarm stopped",
-          "no": "Skallsikring-brudd alarm avsluttet"
+          "no": "Skallsikring-alarm avsluttet"
         },
         "hint": {
-          "en": "Fires when a perimeter breach alarm (armed_stay) is stopped — by the user, by disarming, or automatically.",
-          "no": "Utløses når en Skallsikring-brudd alarm stoppes — av bruker, ved deaktivering eller automatisk."
+          "en": "Fires when a perimeter (armed_perimeter) breach alarm is stopped — by the user, by disarming, or automatically. Use alarm_stopped for Away (armed) mode alarms.",
+          "no": "Utløses når en skallsikringsalarm (armed_perimeter) stoppes — av bruker, ved deaktivering eller automatisk. Bruk alarm_stopped for Borte-modusalarmer."
         },
         "tokens": [
           {
@@ -267,89 +120,16 @@
             }
           }
         ],
-        "id": "alarm_stopped_perimeter"
+        "id": "alarm_perimeter_stopped"
       },
       {
         "title": {
-          "en": "Alarm triggered",
-          "no": "Alarm utløst"
+          "en": "Perimeter breach detected",
+          "no": "Skallsikringsbrudd oppdaget"
         },
         "hint": {
-          "en": "Fires when any sensor trips the alarm while the system is armed. For type-specific reactions use the dedicated trigger cards: alarm_triggered_intrusion or alarm_triggered_entry_delay.",
-          "no": "Utløses når en sensor aktiverer alarmen mens systemet er armert. For type-spesifikke reaksjoner bruk de dedikerte trigger-kortene: alarm_triggered_intrusion eller alarm_triggered_entry_delay."
-        },
-        "tokens": [
-          {
-            "name": "zone",
-            "type": "string",
-            "title": {
-              "en": "Zone",
-              "no": "Sone"
-            },
-            "example": {
-              "en": "Living room",
-              "no": "Stua"
-            }
-          },
-          {
-            "name": "sensor",
-            "type": "string",
-            "title": {
-              "en": "Sensor",
-              "no": "Sensor"
-            },
-            "example": {
-              "en": "Motion sensor (hallway)",
-              "no": "Bevegelsessensor (gang)"
-            }
-          },
-          {
-            "name": "sensor_type",
-            "type": "string",
-            "title": {
-              "en": "Sensor type",
-              "no": "Sensortype"
-            },
-            "example": {
-              "en": "motion",
-              "no": "bevegelse"
-            }
-          },
-          {
-            "name": "mode",
-            "type": "string",
-            "title": {
-              "en": "Current mode",
-              "no": "Aktiv modus"
-            },
-            "example": {
-              "en": "armed_away",
-              "no": "armed_away"
-            }
-          },
-          {
-            "name": "timestamp",
-            "type": "string",
-            "title": {
-              "en": "Timestamp (ISO 8601)",
-              "no": "Tidsstempel (ISO 8601)"
-            },
-            "example": {
-              "en": "2026-05-25T19:05:42.123Z",
-              "no": "2026-05-25T19:05:42.123Z"
-            }
-          }
-        ],
-        "id": "alarm_triggered"
-      },
-      {
-        "title": {
-          "en": "Entry delay timeout — door not disarmed in time",
-          "no": "Inngangsforsinkelse utløpt — dør ikke deaktivert i tide"
-        },
-        "hint": {
-          "en": "Fires when an entry-delay sensor (e.g. front door marked with ⏱ in settings) was opened in Borte mode and the grace period expired before the system was disarmed. A typical flow reaction: send a push «Was that you? Disarm now» and then escalate if no response.",
-          "no": "Utløses når en inngangsforsinkelse-sensor (f.eks. hoveddøren merket med ⏱ i innstillinger) ble åpnet i Borte-modus og nedtellingen utløp uten at systemet ble deaktivert. Typisk flow-reaksjon: send push «Var det deg? Deaktiver nå» og eskaler hvis ingen svarer."
+          "en": "Fires when a sensor trips the alarm while in Perimeter (armed_perimeter) mode. After the entry delay expires, the alarm escalates. Use alarm_triggered for Away (armed) mode breaches.",
+          "no": "Utløses når en sensor aktiverer alarmen i Skallsikringsmodus (armed_perimeter). Etter inngangsforsinkelsen eskalerer alarmen. Bruk alarm_triggered for Borte-modusbrudd."
         },
         "tokens": [
           {
@@ -396,8 +176,8 @@
               "no": "Aktiv modus"
             },
             "example": {
-              "en": "armed_away",
-              "no": "armed_away"
+              "en": "armed_perimeter",
+              "no": "armed_perimeter"
             }
           },
           {
@@ -408,21 +188,70 @@
               "no": "Tidsstempel (ISO 8601)"
             },
             "example": {
-              "en": "2026-05-26T08:00:00.000Z",
-              "no": "2026-05-26T08:00:00.000Z"
+              "en": "2026-05-25T19:05:42.123Z",
+              "no": "2026-05-25T19:05:42.123Z"
             }
           }
         ],
-        "id": "alarm_triggered_entry_delay"
+        "id": "alarm_perimeter_triggered"
       },
       {
         "title": {
-          "en": "Intrusion detected (Borte / armed away)",
-          "no": "Innbrudd oppdaget (Borte)"
+          "en": "Alarm stopped",
+          "no": "Alarm avsluttet"
         },
         "hint": {
-          "en": "Fires when interior motion or a contact sensor trips the alarm while the system is in Borte (armed_away) mode and no one should be home. Use this for full-strength reactions: push to all household members, camera snapshots, siren, full deterrence.",
-          "no": "Utløses når innendørs bevegelse eller en kontaktsensor aktiverer alarmen i Borte-modus og ingen burde være hjemme. Bruk dette for full reaksjon: push til alle i husstanden, kamera-snapshot, sirene, full avskrekking."
+          "en": "Fires when the Away (armed) alarm is stopped — by the user, by disarming, or automatically. Use alarm_perimeter_stopped for perimeter (Skallsikring) alarms.",
+          "no": "Utløses når Borte-alarmen (armed) stoppes — av bruker, ved deaktivering eller automatisk. Bruk alarm_perimeter_stopped for skallsikringsalarmer."
+        },
+        "tokens": [
+          {
+            "name": "zone",
+            "type": "string",
+            "title": {
+              "en": "Zone (that triggered)",
+              "no": "Sone (som utløste)"
+            },
+            "example": {
+              "en": "Living room",
+              "no": "Stua"
+            }
+          },
+          {
+            "name": "sensor",
+            "type": "string",
+            "title": {
+              "en": "Sensor (that triggered)",
+              "no": "Sensor (som utløste)"
+            },
+            "example": {
+              "en": "Motion sensor (hallway)",
+              "no": "Bevegelsessensor (gang)"
+            }
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason",
+              "no": "Årsak"
+            },
+            "example": {
+              "en": "User stopped alarm",
+              "no": "Bruker stoppet alarm"
+            }
+          }
+        ],
+        "id": "alarm_stopped"
+      },
+      {
+        "title": {
+          "en": "Alarm triggered",
+          "no": "Alarm utløst"
+        },
+        "hint": {
+          "en": "Fires when a sensor trips the alarm while in Away (armed) mode. After the entry delay expires, the alarm escalates. Use alarm_perimeter_triggered for perimeter (Skallsikring) breaches.",
+          "no": "Utløses når en sensor aktiverer alarmen i Borte-modus (armed). Etter inngangsforsinkelsen eskalerer alarmen. Bruk alarm_perimeter_triggered for skallsikringsbrudd."
         },
         "tokens": [
           {
@@ -469,8 +298,8 @@
               "no": "Aktiv modus"
             },
             "example": {
-              "en": "armed_away",
-              "no": "armed_away"
+              "en": "armed",
+              "no": "armed"
             }
           },
           {
@@ -481,12 +310,12 @@
               "no": "Tidsstempel (ISO 8601)"
             },
             "example": {
-              "en": "2026-05-26T08:00:00.000Z",
-              "no": "2026-05-26T08:00:00.000Z"
+              "en": "2026-05-25T19:05:42.123Z",
+              "no": "2026-05-25T19:05:42.123Z"
             }
           }
         ],
-        "id": "alarm_triggered_intrusion"
+        "id": "alarm_triggered"
       },
       {
         "title": {
@@ -524,8 +353,8 @@
               "no": "Ny modus"
             },
             "example": {
-              "en": "armed_away",
-              "no": "armed_away"
+              "en": "armed",
+              "no": "armed"
             }
           },
           {
@@ -597,8 +426,8 @@
               "no": "Armert modus"
             },
             "example": {
-              "en": "armed_away",
-              "no": "armed_away"
+              "en": "armed",
+              "no": "armed"
             }
           },
           {
@@ -639,10 +468,51 @@
       },
       {
         "title": {
-          "en": "Deterrence !{{is|is not}} currently active",
-          "no": "Avskrekking !{{pågår|pågår ikke}} akkurat nå"
+          "en": "Perimeter !{{is|is not}} active",
+          "no": "Skallsikring !{{er|er ikke}} aktiv"
         },
-        "id": "deterrence_active"
+        "hint": {
+          "en": "True when the system is in Perimeter (armed_perimeter) mode.",
+          "no": "Sann når systemet er i Skallsikringsmodus (armed_perimeter)."
+        },
+        "id": "alarm_perimeter_active"
+      },
+      {
+        "title": {
+          "en": "Alarm !{{was|was not}} triggered from [[mode]]",
+          "no": "Alarm !{{ble|ble ikke}} utløst fra [[mode]]"
+        },
+        "titleFormatted": {
+          "en": "Alarm !{{was|was not}} triggered from [[mode]]",
+          "no": "Alarm !{{ble|ble ikke}} utløst fra [[mode]]"
+        },
+        "hint": {
+          "en": "True when the current alarm or deterrence was triggered while the system was in the selected mode. Useful for different reactions depending on whether you were home (Perimeter) or away (Armed).",
+          "no": "Sann når pågående alarm eller avskrekking ble utløst mens systemet var i valgt modus. Nyttig for ulike reaksjoner avhengig av om man var hjemme (Skallsikring) eller borte (Armed)."
+        },
+        "args": [
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "armed",
+                "label": {
+                  "en": "Away (armed)",
+                  "no": "Borte (armed)"
+                }
+              },
+              {
+                "id": "armed_perimeter",
+                "label": {
+                  "en": "Perimeter (home at night)",
+                  "no": "Skallsikring (hjemme om natten)"
+                }
+              }
+            ]
+          }
+        ],
+        "id": "alarm_triggered_from"
       },
       {
         "title": {
@@ -653,6 +523,10 @@
           "en": "Mode !{{is|is not}} [[mode]]",
           "no": "Modus !{{er|er ikke}} [[mode]]"
         },
+        "hint": {
+          "en": "Check the current guard mode. Replaces the deprecated is_armed condition.",
+          "no": "Sjekk aktiv vaktstatus. Erstatter den utdaterte is_armed betingelsen."
+        },
         "args": [
           {
             "name": "mode",
@@ -661,28 +535,42 @@
               {
                 "id": "disarmed",
                 "label": {
-                  "en": "Home",
-                  "no": "Hjemme"
+                  "en": "Home (disarmed)",
+                  "no": "Hjemme (deaktivert)"
                 }
               },
               {
-                "id": "armed_away",
+                "id": "armed",
                 "label": {
-                  "en": "Away",
-                  "no": "Borte"
+                  "en": "Away (armed)",
+                  "no": "Borte (armed)"
                 }
               },
               {
-                "id": "armed_stay",
+                "id": "armed_perimeter",
                 "label": {
                   "en": "Perimeter armed",
                   "no": "Skallsikring"
+                }
+              },
+              {
+                "id": "deterrence",
+                "label": {
+                  "en": "Deterrence active",
+                  "no": "Avskrekking aktiv"
+                }
+              },
+              {
+                "id": "alarm",
+                "label": {
+                  "en": "Alarm triggered",
+                  "no": "Alarm utløst"
                 }
               }
             ]
           }
         ],
-        "id": "is_armed"
+        "id": "get_mode"
       }
     ],
     "actions": [
@@ -749,12 +637,12 @@
       },
       {
         "title": {
-          "en": "Set McCallister Guard mode",
-          "no": "Sett McCallister Guard-modus"
+          "en": "Set mode",
+          "no": "Sett modus"
         },
         "titleFormatted": {
-          "en": "Set McCallister Guard mode to [[mode]]",
-          "no": "Sett McCallister Guard-modus til [[mode]]"
+          "en": "Set mode to [[mode]] by [[name]]",
+          "no": "Sett modus til [[mode]] av [[name]]"
         },
         "args": [
           {
@@ -764,25 +652,33 @@
               {
                 "id": "disarmed",
                 "label": {
-                  "en": "Home (disarmed)",
-                  "no": "Hjemme (deaktivert)"
+                  "en": "Home",
+                  "no": "Hjemme"
                 }
               },
               {
-                "id": "armed_away",
+                "id": "armed",
                 "label": {
-                  "en": "Away (with exit delay)",
-                  "no": "Borte (med utpassering)"
+                  "en": "Away",
+                  "no": "Borte"
                 }
               },
               {
-                "id": "armed_stay",
+                "id": "armed_perimeter",
                 "label": {
-                  "en": "Perimeter armed (immediate)",
-                  "no": "Skallsikring (umiddelbart)"
+                  "en": "Perimeter",
+                  "no": "Skallsikring"
                 }
               }
             ]
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "placeholder": {
+              "en": "Name (optional)",
+              "no": "Navn (valgfritt)"
+            }
           }
         ],
         "id": "set_mode"
