@@ -350,6 +350,90 @@ DA   Sett modus til Borte                   ← set_mode = armed
 > **Merk:** Bruk `get_mode = disarmed` som condition for å unngå at presence-flowen
 > overskriver en eksisterende `armed_perimeter` (nattmodus) når alle forlater huset om morgenen.
 
+#### Aktivering av Skallsikring (nattmodus)
+
+```
+NÅR  Klokken er 22:00
+OG   Modus er [Hjemme (disarmed)]
+DA   Sett modus til Skallsikring
+```
+
+Alternativt: bruk den innebygde tidsplanleggeren i appen (Innstillinger → Skallsikring auto).
+
+---
+
+### Anbefalte flows — kameraopptak ved alarm
+
+> **Homey-begrensning:** Appen kan ikke ta bilder fra kameraer direkte. Homey tillater ikke at
+> en tredjepartsapp kaller en annen apps action-kort (f.eks. «Ta snapshot») fra koden — dette
+> er kun mulig fra Flow-editoren. Du må derfor opprette **én flow per kamera** du ønsker å trigge.
+
+Appen sender `zone`-tokenet med `alarm_triggered` og `alarm_perimeter_triggered`. Bruk dette
+som condition for å velge riktig kamera:
+
+```
+NÅR  Alarm utløst (alarm_triggered)
+OG   [[zone]] inneholder "Inngang"          ← Homey Logic: tekst-condition
+DA   [Kamera-app]: Ta snapshot fra [inngang-kamera]
+     Telegram: Send melding med bilde [[snapshot]]
+
+NÅR  Alarm utløst (alarm_triggered)
+OG   [[zone]] inneholder "Garasje"
+DA   [Kamera-app]: Ta snapshot fra [garasje-kamera]
+     Telegram: Send melding med bilde [[snapshot]]
+```
+
+**Forutsetning:** Kamera-appen (Reolink, Eufy, Unifi Protect, ONVIF m.fl.) må ha et
+«Ta snapshot»-action-kort i Flow-editoren som returnerer et bildetoken. Sjekk dette i
+kamera-appens dokumentasjon på Homey App Store.
+
+**Tilgjengelige tokens fra appen:**
+
+| Token | Innhold |
+|---|---|
+| `[[zone]]` | Navn på sonen der sensoren utløste alarmen |
+| `[[sensor]]` | Navn på sensoren som utløste alarmen |
+| `[[sensor_type]]` | `motion` eller `contact` |
+| `[[mode]]` | Aktiv modus da alarmen ble utløst |
+| `[[timestamp]]` | ISO 8601-tidsstempel |
+
+---
+
+### Anbefalte flows — lyd og video ved avskrekking
+
+> **Homey-begrensning:** Appen kan ikke starte lyd- eller videoavspilling på høyttalere, TV-er
+> eller Chromecast direkte fra kode. Homeys plattform eksponerer tredjepartsappers flow-kort
+> (f.eks. «Spill lyd», «Cast video») **kun via Flow-editoren** — ikke via noe API en custom app
+> kan kalle. Du må derfor opprette flows manuelt for å koble avskrekking til lyd og video.
+
+Appen fyrer `mode_changed` (mode_new = deterrence) og `alarm_triggered` / `alarm_perimeter_triggered`
+som integrasjonspunkter. Lys-avskrekking (blink i reaksjonssone) kjører alltid automatisk —
+lyd og video må settes opp som bruker-flows.
+
+```
+NÅR  Modus endret (mode_changed)
+OG   mode_new = deterrence
+DA   Sonos / Homey-høyttaler: Spill «bjeffing.mp3» med volum 80 %
+     Chromecast: Cast video «blålys.mp4» til stue-TV
+
+NÅR  Alarm utløst (alarm_perimeter_triggered)
+DA   [Høyttaler i gang]: Spill «advarsel.mp3»
+     Push til DEG: «Noen ved [[sensor]]»
+
+NÅR  Modus endret (mode_changed)
+OG   mode_new = disarmed
+DA   Sonos: Stop avspilling
+     Chromecast: Stop avspilling
+```
+
+**Tips:**
+- Bruk `alarm_triggered_from`-condition under aktiv `alarm`-fase for å spille ulike lyder
+  avhengig av om alarmen kom fra Borte- eller Skallsikring-modus.
+- Appen deaktiverer lys-vakta (`LightAuthGuard`) mens avskrekking pågår — egne flows kan
+  trygt styre lys i reaksjonssonen parallelt med innebygd blink.
+- Volum-kontroll på tredjepartshøyttalere må gjøres i samme flow — appen har ikke tilgang
+  til dette fra koden.
+
 
 ## Sett opp flows basert på modus-endringer
 

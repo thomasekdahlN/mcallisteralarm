@@ -318,3 +318,69 @@ NÅR  Klokken er 22:00
 OG   Modus er [Hjemme (disarmed)]
 DA   Sett modus til Skallsikring
 ```
+
+### 8.4 Kameraopptak ved alarm — én flow per kamera
+
+**Homey-begrensning:** Appen kan ikke ta bilder fra kameraer direkte. Homeys plattform
+eksponerer tredjepartsappers action-kort (f.eks. «Ta snapshot» fra Reolink-appen) kun via
+Flow-editoren — ikke via noe API en custom app kan kalle fra kode. Det må derfor opprettes
+**én manuell flow per kamera** man ønsker å trigge.
+
+Appen sender `zone`-token på `alarm_triggered` og `alarm_perimeter_triggered`. Bruk dette
+som condition for å rute til riktig kamera:
+
+```
+NÅR  Alarm utløst (alarm_triggered)
+OG   [[zone]] inneholder "Inngang"
+DA   [Kamera-app]: Ta snapshot fra [inngang-kamera]
+     Telegram: Send bilde [[snapshot]]
+
+NÅR  Alarm utløst (alarm_triggered)
+OG   [[zone]] inneholder "Garasje"
+DA   [Kamera-app]: Ta snapshot fra [garasje-kamera]
+     Telegram: Send bilde [[snapshot]]
+```
+
+Tilsvarende flows opprettes for `alarm_perimeter_triggered` ved Skallsikring-brudd.
+
+**Forutsetning:** Kamera-appen må ha et «Ta snapshot»-action-kort i Flow-editoren som
+returnerer et bildetoken (`[[snapshot]]`). Sjekk kamera-appens dokumentasjon på Homey
+App Store. Apper som typisk støtter dette: Reolink, Eufy Security, Unifi Protect, ONVIF.
+
+### 8.5 Lyd og video ved avskrekking — én flow per scenario
+
+**Homey-begrensning:** Appen kan ikke starte lyd- eller videoavspilling direkte fra kode.
+Homey eksponerer tredjepartsappers flow-kort (Sonos, Chromecast, Homey-høyttaler, Samsung TV)
+kun via Flow-editoren. Det er med andre ord umulig for en custom app å programmatisk be
+Chromecast-appen om å spille av en URL — alt vi har utforsket er dokumentert i README.
+
+Integrasjonspunktet er `mode_changed`-triggeren (mode_new = deterrence) og
+`alarm_triggered` / `alarm_perimeter_triggered`. Innebygd lys-avskrekking (blink i
+reaksjonssone) kjører alltid automatisk — lyd og video må settes opp manuelt:
+
+```
+NÅR  Modus endret (mode_changed)
+OG   mode_new = deterrence
+DA   Sonos: Spill «bjeffing.mp3» med volum 80 %
+     Chromecast: Cast video «blålys.mp4» til stue-TV
+
+NÅR  Modus endret (mode_changed)
+OG   mode_new = disarmed
+DA   Sonos: Stop avspilling
+     Chromecast: Stop avspilling
+```
+
+Bruk `alarm_triggered_from`-condition for å differensiere lyd basert på om alarmen
+kom fra Borte- (`armed`) eller Skallsikring-modus (`armed_perimeter`):
+
+```
+NÅR  Modus endret (mode_changed)
+OG   mode_new = deterrence
+OG   Alarm ble utløst fra [Borte (armed)]
+DA   Sonos: Spill «full-sirene.mp3» — kraftig avskrekking
+
+NÅR  Modus endret (mode_changed)
+OG   mode_new = deterrence
+OG   Alarm ble utløst fra [Skallsikring]
+DA   Sonos: Spill «advarsel-natt.mp3» — mild, vekk beboerne
+```
