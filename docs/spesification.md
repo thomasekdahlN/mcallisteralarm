@@ -119,8 +119,10 @@ Systemet er inaktivt. Ingen simulering eller avskrekkingslogikk kjører.
 
 Aktiveres manuelt fra Dashboard eller via Flow-kort (`set_mode = Borte`). Har exit delay (default 60 s).
 
-* **Ved aktivering (Helsesjekk):** Appen scanner alle tilknyttede sensorer. Hvis en sensor er offline, sendes et pushvarsel: *"McCallister Guard aktivert, men [Sensor Navn] rapporterer ikke."* (Batterinivå sjekkes ikke.)
+* **Ved aktivering (Helsesjekk — offline sensorer):** Appen scanner alle tilknyttede sensorer. Hvis en sensor er offline, sendes et pushvarsel: *"McCallister Guard aktivert, men [Sensor Navn] rapporterer ikke."* (Batterinivå sjekkes ikke.)
+* **Ved aktivering (Helsesjekk — åpne dør/vindu):** Appen scanner alle `alarm_contact`-sensorer. Er noen åpne, sendes en push-notifikasjon med liste over åpne sensorer og en advarsel logges. Armeringen stoppes ikke — varslingen er utelukkende informativ.
 * **Utpasseringsforsinkelse (Exit Delay):** Nedtelling starter (f.eks. 60s). Alle lys slås av, og sensorer ignoreres under nedtellingen.
+* **Nattvindu-redirect:** Hvis `set_mode = Hjemme` mottas mens systemet er i Borte-modus og Skallsikring-scheduleren er aktiv innenfor det konfigurerte tidsrommet (f.eks. 22:00–06:00), omdirigeres kommandoen automatisk til `armed_perimeter` i stedet for å deaktivere. Dette forhindrer at en smart-lås-flow lar huset stå ubeskyttet om natten.
 
 ### 5.3. Aktivert: Skallsikring (`armed_perimeter`)
 
@@ -141,6 +143,7 @@ Brukes når huseier sover.
   Gjelder både Skallsikring og Borte-modus. Kombineres typisk med en bruker-bygget flow som
   automatisk deaktiverer systemet når smartlåsen rapporterer autorisert opplåsing — da utløses
   ingen alarm i det hele tatt, og inngangsforsinkelsen er fallback hvis flowen feiler.
+* **Ventilasjonsmodus (sensorsnap):** Ved aktivering av Skallsikring tas et øyeblikksbilde av alle perimeter-sensorer som allerede er åpne (`alarm_contact = true`). Disse ignoreres stille for resten av sesjonen. Dette gjør det mulig å sove med et vindu på gløtt uten at det utløser alarm. Nye åpninger (etter aktiveringstidspunktet) reagerer normalt. Øyeblikksbildet nullstilles automatisk ved deaktivering.
 
 ---
 
@@ -190,12 +193,14 @@ Brukes når huseier sover.
 
 
 
-### Modul 5: Strikte Lysrestriksjoner (Uautorisert lys-av)
+### Modul 5: Strikte Lysrestriksjoner (`LightAuthGuard`)
 
-* **Betingelse:** `Status = Borte`.
+* **Betingelse:** `Status = Borte` (eller `armed_perimeter`).
 * **Handling:** Hvis et lys i huset endrer tilstand til `PÅ`, gjør appen en sjekk: *Ble dette lyset slått på av McCallister Guard-appen (Modul 1 eller Modul 2)?*
 * **Implementasjon:** Appen holder en intern buffer over egne `onoff=true`-kommandoer i siste ~2 sekunder. Endringer i lysstatus som *ikke* matcher en buffret kommando regnes som uautoriserte.
+* **Logging:** Oppdagelsen av uautorisert lys-på logges alltid med enhets- og sonenavn (warning-nivå). Om korreksjons-kommandoen (slå av) lykkes eller feiler loggføres **ikke** — dette for å holde hendelsesloggen fri for støy fra nettverksfeil.
 * **Konsekvens:** Hvis lyset ble slått på manuelt (f.eks. av en tyv som trykker på en fysisk veggbryter, eller etter strømbrudd-resett), sender appen en `AV`-kommando umiddelbart (< 1 sekund). *Et mørkt hus tvinger tyven til å bruke lommelykt, som gjør det lettere for bevegelsessensorer og kameraer å fange dem opp.*
+* **Unntaksperiode:** `LightAuthGuard` deaktiveres mens avskrekking (`deterrence`) pågår, slik at en ekstern flow trygt kan styre lys i reaksjonssonen parallelt med innebygd blink.
 
 ---
 

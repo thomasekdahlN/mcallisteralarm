@@ -66,8 +66,8 @@ export default class LightAuthGuard {
       this.log.add('warning', `Uautorisert lys-på: ${deviceName} i sone ${zoneName} — slår av.`, zoneId, deviceId);
       this.registerOwnCommand(deviceId, false);
       await device.setCapabilityValue({ capabilityId: 'onoff', value: false });
-    } catch (err) {
-      this.log.add('warning', `Kunne ikke slå av uautorisert lys (${deviceName}): ${(err as Error).message}`, zoneId, deviceId);
+    } catch {
+      // best-effort — do not log success/failure of the corrective turn-off
     }
   }
 

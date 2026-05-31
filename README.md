@@ -14,7 +14,7 @@ McCallister Guard er ikke enda et passivt alarmsystem. I stedet for å bare tute
 - **Sone-basert avskrekking** — bevegelse i én sone trigger avskrekking i en annen «reaksjonssone» (matrise konfigurerbar per sone), så tyven aldri møter responsen sin der hen er
 - **Konfigurerbar lys-avskrekking** — appen blinker lys i reaksjonssonen med en sakte syklus (PÅ/AV-tid konfigurerbar pr. sone, default 15 sek hver vei). Modus-endringer kan brukes i `mode_changed`-triggeren til å bygge egne Homey-flows
 - **Kevin-modus** — automatisk tilstedeværelses-simulering i Borte-modus (lys av/på i sannsynlig sekvens)
-- **Lys-autorisering** — uautorisert lysbruk under armert tilstand oppdages og slås umiddelbart av; kun app-initierte kommandoer tillates (tyv kan ikke «gjemme seg» ved å skru på lys)
+- **Lys-autorisering** — uautorisert lysbruk under armert tilstand oppdages, logges og slås umiddelbart av; kun app-initierte kommandoer tillates (tyv kan ikke «gjemme seg» ved å skru på lys). Kun oppdagelsen logges — om korreksjonen lykkes eller feiler loggføres ikke for å holde loggene rene.
 - **Eskalering** — om avskrekking ikke får tyven til å snu, eskalerer systemet automatisk til Alarm-modus etter konfigurert tid (full sirene, strobe på alle lys)
 - **Falsk-alarm-filter** — flere uavhengige sensor-treff kreves før eskalering starter
 - **Flow-kort** — actions, conditions og triggers (inkl. `mode_changed` og `timestamp`-token) for full integrasjon med Homey-flows (push, SMS, kamera, naboalarmer)
@@ -104,7 +104,8 @@ stateDiagram-v2
   Hjemme --> Avskrekking: testDeterrence()
   Hjemme --> Alarm: testAlarm()
 
-  Borte --> Hjemme: setMode(disarmed)
+  Borte --> Hjemme: setMode(disarmed)\n(utenfor nattvindu)
+  Borte --> Skallsikring: setMode(disarmed)\ni nattvindu (auto-redirect)
   Borte --> Avskrekking: sensor utløst\n(entry delay → confirm)
   Borte --> Alarm: testAlarm()
 
@@ -331,9 +332,12 @@ DA   Sett modus til Hjemme av [[bruker]]    ← set_mode action (name = låsens 
 
 | Aktiv modus | Resultat |
 |---|---|
-| `armed` (Borte) | Systemet deaktiveres normalt før døren åpnes — ingen alarm |
-| `armed_perimeter` (Skallsikring) | `set_mode=disarmed` ignoreres (guard aktiv) — men hoveddøren har entry delay, som starter perimeter-bypass automatisk. Beboer kan deaktivere manuelt via dashboard innen entry_delay sekunder |
+| `armed` (Borte) — utenfor nattvindu | Systemet deaktiveres normalt før døren åpnes — ingen alarm |
+| `armed` (Borte) — **i nattvindu** | `set_mode=disarmed` omdirigeres automatisk til `armed_perimeter` — huset går til Skallsikring i stedet for å deaktiveres helt. Forhindrer at en smart-lås-flow lar huset stå ubeskyttet om natten. |
+| `armed_perimeter` (Skallsikring) | `set_mode=disarmed` ignoreres (guard aktiv) — hoveddøren har entry delay som starter perimeter-bypass automatisk. Beboer kan deaktivere manuelt via dashboard innen entry_delay sekunder. |
 | `disarmed` | Ingen effekt |
+
+> **Nattvindu-redirect:** Omdirigering fra `armed` til `armed_perimeter` gjelder kun når den innebygde Skallsikring-scheduleren er aktivert (Innstillinger → Skallsikring auto) og klokken er innenfor det konfigurerte tidsrommet (f.eks. 22:00–06:00). Automatisk scheduler og `force=true` fra interne flows går forbi denne logikken.
 
 #### Aktivering basert på tilstedeværelse (anbefalt)
 
@@ -359,6 +363,26 @@ DA   Sett modus til Skallsikring
 ```
 
 Alternativt: bruk den innebygde tidsplanleggeren i appen (Innstillinger → Skallsikring auto).
+
+#### Ventilasjonsmodus — Skallsikring med åpne vinduer
+
+Når Skallsikring aktiveres tar appen et øyeblikksbilde av hvilke perimeter-sensorer som allerede er åpne. Disse sensorene ignoreres stille for resten av sesjonen — du kan sove med et vindu på gløtt uten å utløse alarm. Nye åpninger (vinduer/dører som åpnes *etter* aktivering) reagerer normalt.
+
+```
+Eksempel:
+  22:00 — Skallsikring aktiveres
+          Vindu bad: alarm_contact = true  ← allerede åpent → ignoreres
+          Hoveddør:  alarm_contact = false ← lukket → normal beskyttelse
+
+  23:15 — Noen åpner kjøkkendøren
+          alarm_contact = true (ny åpning) → inngangsforsinkelse starter → alarm
+```
+
+Øyeblikksbildet nullstilles automatisk når Skallsikring deaktiveres.
+
+#### Helsesjekk ved Borte-aktivering
+
+Når systemet settes til Borte (`armed`) sjekker appen alle dør- og vindu-sensorer. Er noen åpne, sendes en push-notifikasjon til Homey-appen og en advarsel logges. Armering stoppes ikke — varslingen er utelukkende informativ slik at du kan bestemme deg for å lukke vinduet eller godta risikoen.
 
 ---
 

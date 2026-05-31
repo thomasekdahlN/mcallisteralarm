@@ -34,6 +34,7 @@ class McCallisterGuardApp extends Homey.App {
   private lastArmedStayWindowState: boolean | null = null;
   private deterrenceTimer: NodeJS.Timeout | null = null;
   private previousArmedMode: 'armed_perimeter' | 'armed' | null = null;
+  private openSensorsAtPerimeterStart = new Set<string>();
   private motionLastSeen = new Map<string, number>();
   private perimeterBypassEndsAt: number | null = null;
   private perimeterBypassTimer: NodeJS.Timeout | null = null;
@@ -142,6 +143,16 @@ class McCallisterGuardApp extends Homey.App {
       return;
     }
 
+    // Auto-redirect: disarming from armed during the perimeter scheduler window activates
+    // perimeter mode instead of fully disarming. This covers the case where a resident comes
+    // home at night and their smart-lock flow sends set_mode=disarmed — the house switches to
+    // night guard rather than going fully unarmed. Scheduler and force=true bypass this.
+    if (mode === 'disarmed' && current === 'armed' && !force && this.isInArmedPerimeterWindow()) {
+      this.eventLog.add('info', 'Borte-modus deaktivert i skalltidsvindu — bytter til Skallsikring i stedet.');
+      await this.setMode('armed_perimeter');
+      return;
+    }
+
     const settings = this.getSettings();
     if (mode === 'disarmed') {
       // Coming from alarm: fire alarm_stopped flow cards before tearing down.
@@ -159,7 +170,23 @@ class McCallisterGuardApp extends Homey.App {
       this.previousArmedMode = null;
       this.alarmContext = null;
     }
+
+    // Clear perimeter snapshot when leaving armed_perimeter.
+    if (current === 'armed_perimeter' && mode !== 'armed_perimeter') {
+      this.openSensorsAtPerimeterStart.clear();
+    }
+
+    // Snapshot open contact sensors before armed_perimeter activates so they can be ignored.
+    if (mode === 'armed_perimeter') {
+      await this.snapshotOpenPerimeterSensors();
+    }
+
     await this.stateMachine.setMode(mode, mode === 'armed' ? settings.exit_delay : 0);
+
+    // Warn about open door/window sensors when arming in away mode.
+    if (mode === 'armed') {
+      this.checkOpenContactSensors().catch(() => { /* best-effort */ });
+    }
   }
 
   async testDeterrence(zoneId: string): Promise<void> {
@@ -509,8 +536,13 @@ class McCallisterGuardApp extends Homey.App {
   private async registerFlowActions(): Promise<void> {
     this.homey.flow.getActionCard('set_mode')
       .registerRunListener(async (args: { mode: Mode; name?: string }) => {
-        if (args.mode === 'disarmed' && args.name) {
-          this.pushTimeline(`McCallister Guard: Deaktivert av ${args.name}`);
+        if (args.mode === 'disarmed') {
+          // Always log disarm attempts — including when mode is already disarmed or
+          // when armed_perimeter guard silently ignores the request.
+          const now = new Date().toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+          const who = args.name?.trim() || 'ukjent';
+          this.eventLog.add('info', `Deaktivering forsøkt av ${who} kl. ${now}.`);
+          this.pushTimeline(`McCallister Guard: Deaktivering av ${who} kl. ${now}`);
         }
         await this.setMode(args.mode);
         return true;
@@ -589,6 +621,64 @@ class McCallisterGuardApp extends Homey.App {
     return list.includes(deviceId);
   }
 
+  /** Returns true if the armed_perimeter auto-schedule is enabled and now falls within the configured window. */
+  private isInArmedPerimeterWindow(): boolean {
+    const settings = this.getSettings();
+    if (!settings.armed_perimeter_auto) return false;
+    const on = settings.armed_perimeter_on || '22:00';
+    const off = settings.armed_perimeter_off || '06:00';
+    const now = new Date();
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const overnight = on > off;
+    return overnight ? (hhmm >= on || hhmm < off) : (hhmm >= on && hhmm < off);
+  }
+
+  /**
+   * Snapshot which perimeter contact sensors are currently open so they can be ignored
+   * for the lifetime of the armed_perimeter session. A window left open when you arm
+   * for the night should not trigger an alarm.
+   */
+  private async snapshotOpenPerimeterSensors(): Promise<void> {
+    try {
+      const devices = await this.homeyApi.devices.getDevices();
+      this.openSensorsAtPerimeterStart.clear();
+      for (const device of Object.values(devices) as any[]) {
+        if (!Array.isArray(device.capabilities)) continue;
+        if (!device.capabilities.includes('alarm_contact')) continue;
+        if (!this.isPerimeterSensor(device.id)) continue;
+        const val = device.capabilitiesObj?.alarm_contact?.value;
+        if (val === true) {
+          this.openSensorsAtPerimeterStart.add(device.id);
+          const name = device.name || device.id;
+          this.eventLog.add('info', `Sensor åpen ved aktivering — ignoreres i skallsikring: ${name}.`, device.zone, device.id);
+        }
+      }
+    } catch (err) {
+      this.eventLog.add('warning', `Snapshot av åpne sensorer feilet: ${(err as Error).message}`);
+    }
+  }
+
+  /** Warn about open door/window contact sensors when arming in away mode. */
+  private async checkOpenContactSensors(): Promise<void> {
+    try {
+      const devices = await this.homeyApi.devices.getDevices();
+      const open: string[] = [];
+      for (const device of Object.values(devices) as any[]) {
+        if (!Array.isArray(device.capabilities)) continue;
+        if (!device.capabilities.includes('alarm_contact')) continue;
+        const val = device.capabilitiesObj?.alarm_contact?.value;
+        if (val === true) open.push(device.name || device.id);
+      }
+      if (open.length > 0) {
+        const msg = `${open.length} dør/vindu er åpen(e) ved aktivering: ${open.join(', ')}`;
+        this.eventLog.add('warning', msg);
+        await this.homey.notifications.createNotification({ excerpt: `⚠️ ${msg}` });
+      }
+    } catch (err) {
+      this.eventLog.add('warning', `Sjekk av åpne sensorer feilet: ${(err as Error).message}`);
+    }
+  }
+
   private async onMotion(zoneId: string, deviceId: string): Promise<void> {
     this.motionLastSeen.set(zoneId, Date.now());
     const mode = this.stateMachine.getMode();
@@ -638,6 +728,12 @@ class McCallisterGuardApp extends Homey.App {
 
     if (mode === 'armed_perimeter' && this.isPerimeterBypassed()) {
       this.eventLog.add('info', 'Dør/vindu i perimetersensor ignorert (bypass aktiv).', zoneId, deviceId);
+      return;
+    }
+
+    // Ignore sensors that were already open when armed_perimeter was activated.
+    if (mode === 'armed_perimeter' && this.openSensorsAtPerimeterStart.has(deviceId)) {
+      this.eventLog.add('info', 'Sensor var åpen ved aktivering av skallsikring — ignoreres.', zoneId, deviceId);
       return;
     }
 

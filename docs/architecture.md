@@ -57,7 +57,7 @@ McAllisterAlarm/                       # workspace-rot
     │   ├── DeterrenceEngine.ts        # Sone-mapping og reaktiv avskrekking
     │   ├── CameraManager.ts           # Snapshot-loop (5s) og varsling
     │   ├── EventLog.ts                # Persistent logg (150 hendelser)
-    │   └── LightAuthGuard.ts          # Modul 5: uautorisert lys-av
+    │   └── LightAuthGuard.ts          # Modul 5: oppdager og korrigerer uautorisert lys-på (logger oppdagelse, ikke resultat)
     ├── api.ts                         # REST API-endepunkter for Dashboardet
     ├── settings/
     │   └── index.html                 # Dashboard UI (Soneoversikt, logg, config)
@@ -153,11 +153,15 @@ Mode = 'disarmed' | 'armed' | 'armed_perimeter' | 'deterrence' | 'alarm'
 
 ```
 disarmed        → armed, armed_perimeter, deterrence*, alarm*
-armed           → disarmed, deterrence, alarm
+armed           → disarmed (utenfor nattvindu), armed_perimeter (nattvindu-redirect), deterrence, alarm
 armed_perimeter → disarmed*, armed, deterrence, alarm
 deterrence      → alarm, armed_perimeter, armed, disarmed
 alarm           → armed_perimeter, armed, disarmed
 
+* armed → disarmed omdirigeres til armed_perimeter når Skallsikring-scheduleren er aktiv og
+  klokken er innenfor det konfigurerte nattvinduet (f.eks. 22:00–06:00).
+  Dette forhindrer at en smart-lås-flow deaktiverer systemet helt når noen kommer hjem sent.
+  Scheduler og force=true hopper over omdirigeringen.
 * armed_perimeter → disarmed ignoreres fra eksterne flows (smart-lås-guard).
   Kun scheduler med force=true kan deaktivere Skallsikring automatisk.
 * deterrence/alarm fra disarmed er kun tilgjengelig fra test-knapp/flow.
@@ -193,8 +197,11 @@ Initialiserer appen, kobler seg til Homey API-en og lytter på globale bevegelse
 | `enterDeterrence()` | Setter modus=deterrence, starter blink i reaksjonssone og starter `deterrenceTimer` |
 | `enterAlarm()` | Kaller `EscalationManager.triggerCrisis()` og setter modus=alarm |
 | `clearDeterrenceTimer()` | Avbryter eskaleringstimeren (kalles fra `setMode('disarmed')`, `stopAlarm()`, test-metoder) |
-| `setMode()` | Brukerinitiiert modusbytte — rydder alltid timere og media ved disarmed |
+| `setMode()` | Brukerinitiiert modusbytte — rydder timere/media ved disarmed, håndterer nattvindu-redirect og sensorsnap |
 | `stopAlarm()` | Stopper pågående alarm og returnerer til `previousArmedMode` |
+| `isInArmedPerimeterWindow()` | Returnerer `true` dersom Skallsikring-scheduleren er aktiv og klokken er innenfor nattvinduet |
+| `snapshotOpenPerimeterSensors()` | Tar øyeblikksbilde av åpne perimeter-sensorer ved aktivering av Skallsikring; disse ignoreres for resten av sesjonen (ventilasjonsmodus) |
+| `checkOpenContactSensors()` | Sjekker alle dør/vindu-sensorer ved arming i Borte-modus; sender push-notifikasjon og logger advarsel for åpne sensorer |
 
 ### 4.2. Logikkmotoren for "Mind-games": `lib/DeterrenceEngine.ts`
 
