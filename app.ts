@@ -37,6 +37,7 @@ class McCallisterGuardApp extends Homey.App {
   private perimeterBypassEndsAt: number | null = null;
   private perimeterBypassTimer: NodeJS.Timeout | null = null;
   private alarmContext: { zoneId: string; zoneName: string; deviceId: string; deviceName: string; sensorType: string; alarmType: AlarmType } | null = null;
+  private latestSnapshot: Homey.Image | null = null;
   private zoneNameCache = new Map<string, string>();
   private zoneCacheTimer: NodeJS.Timeout | null = null;
   private static readonly TEST_DURATION_MS = 15_000;
@@ -80,6 +81,7 @@ class McCallisterGuardApp extends Homey.App {
       this.pushTimeline(`Avskrekking startet i ${reactionName} (bevegelse i ${motionName}).`);
     });
     this.cameras.onSnapshot((zoneId, _cameraId, cameraName, snapshotImage) => {
+      this.latestSnapshot = snapshotImage;
       const zoneName = this.zoneNameCache.get(zoneId) ?? zoneId;
       const tokens = {
         zone: zoneName,
@@ -307,16 +309,18 @@ class McCallisterGuardApp extends Homey.App {
     };
     const alarmLabel = alarmType === 'perimeter' ? '**Perimeter**' : '**Alarm**';
     this.eventLog.add('alarm', `${alarmLabel} Avskrekking i ${zoneName} — ${deviceName}.`, zoneId, deviceId);
+    this.pushTimeline(`🚨 Avskrekking: ${deviceName} i ${zoneName}`);
 
     await this.stateMachine.setMode('deterrence');
 
-    const baseTokens = {
+    const baseTokens: Record<string, unknown> = {
       zone: zoneName,
       sensor: deviceName,
       sensor_type: sensorType,
       mode,
       timestamp: new Date().toISOString(),
     };
+    if (this.latestSnapshot !== null) baseTokens.snapshot = this.latestSnapshot;
     // Fire type-specific trigger: perimeter alarms → alarm_perimeter_triggered, away alarms → alarm_triggered.
     if (alarmType === 'perimeter') {
       try { await this.homey.flow.getTriggerCard('alarm_perimeter_triggered').trigger(baseTokens); } catch { /* best-effort */ }
@@ -343,15 +347,19 @@ class McCallisterGuardApp extends Homey.App {
     if (mode === 'alarm') return;
     this.previousArmedMode = 'armed_perimeter';
     const { zoneName, deviceName } = await this.resolveNames(zoneId, deviceId);
-    this.alarmContext = { zoneId, zoneName, deviceId, deviceName, sensorType, alarmType: 'perimeter' };
+    this.alarmContext = {
+      zoneId, zoneName, deviceId, deviceName, sensorType, alarmType: 'perimeter',
+    };
     this.eventLog.add('alarm', `**Perimeter** Alarm: ${deviceName} i ${zoneName}.`, zoneId, deviceId);
-    const baseTokens = {
+    this.pushTimeline(`🚨 Skallsikring alarm: ${deviceName} i ${zoneName}`);
+    const baseTokens: Record<string, unknown> = {
       zone: zoneName,
       sensor: deviceName,
       sensor_type: sensorType,
       mode,
       timestamp: new Date().toISOString(),
     };
+    if (this.latestSnapshot !== null) baseTokens.snapshot = this.latestSnapshot;
     try { await this.homey.flow.getTriggerCard('alarm_perimeter_triggered').trigger(baseTokens); } catch { /* best-effort */ }
     await this.enterAlarm();
   }
@@ -364,6 +372,9 @@ class McCallisterGuardApp extends Homey.App {
     if (mode === 'disarmed' || mode === 'alarm') return;
     await this.deterrence.abort('Avskrekking eskalert til full alarm.');
     await this.stateMachine.setMode('alarm');
+    const ctx = this.alarmContext;
+    const locationMsg = ctx?.zoneName ? ` i ${ctx.zoneName}` : '';
+    this.pushTimeline(`🚨 ALARM utløst${locationMsg}${ctx?.deviceName ? ` — ${ctx.deviceName}` : ''}`);
     await this.escalation.triggerCrisis();
   }
 
@@ -508,7 +519,7 @@ class McCallisterGuardApp extends Homey.App {
     if (next !== 'disarmed' && previous === 'disarmed') {
       this.runHealthCheck().catch(() => { /* best-effort */ });
     }
-    this.pushTimeline(`McCallister Guard: ${this.modeLabel(next)}`);
+    this.pushTimeline(this.modeLabel(next));
     try {
       this.homey.flow.getTriggerCard('mode_changed').trigger({
         mode_new: next,
@@ -546,7 +557,7 @@ class McCallisterGuardApp extends Homey.App {
           // when armed_perimeter guard silently ignores the request.
           const who = (args.name?.trim() || 'ukjent').replace(/^user:\s*/i, '');
           this.eventLog.add('info', `Deaktivert av ${who}.`);
-          this.pushTimeline(`McCallister Guard: Deaktivert av ${who}`);
+          this.pushTimeline(`Deaktivert av ${who}`);
         }
         await this.setMode(args.mode);
         return true;
