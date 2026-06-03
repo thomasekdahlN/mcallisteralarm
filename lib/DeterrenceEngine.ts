@@ -54,7 +54,6 @@ export default class DeterrenceEngine {
 
     const reactionZoneId = settings.zone_matrix[motionZoneId];
     if (!reactionZoneId) {
-      this.log.add('warning', `Ingen reaksjonssone definert for ${motionZoneId}.`, motionZoneId);
       return;
     }
     await this.execute(reactionZoneId, motionZoneId);
@@ -79,7 +78,7 @@ export default class DeterrenceEngine {
     }
     if (this.activeDeterrenceZone) {
       await this.media.stopZone(this.activeDeterrenceZone);
-      this.log.add('info', `${reason} Stopper avskrekking i ${this.activeDeterrenceZone}.`, this.activeDeterrenceZone);
+      this.log.add('info', 'Avskrekking stoppet.', this.activeDeterrenceZone);
       this.activeDeterrenceZone = null;
     }
     this.activeMotionZone = null;

@@ -7,7 +7,8 @@
   Source: design/appicon with shield.svg (Adobe Illustrator export, cleaned).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
-  <g fill="#FFFFFF">
+  <!-- Scale 1.15× from centre (500,500) to fill more of the Homey brandColor circle -->
+  <g fill="#FFFFFF" transform="translate(500 500) scale(1.15) translate(-500 -500)">
     <!-- Figure: head -->
     <path d="M544.13,282.8c-4.96,8.54-27.49,48.74-31.41,55.73c-0.36,0.65-1.04,1.04-1.78,1.04h-22.71
       c-0.75,0-1.44-0.41-1.8-1.07c-2.95-5.47-16.61-30.8-27.37-50.6c-9.54-17.55-22.53-18.61-27.64-18.27

@@ -147,7 +147,7 @@ class McCallisterGuardApp extends Homey.App {
     if (mode === 'disarmed') {
       // Coming from alarm: fire alarm_stopped flow cards before tearing down.
       if (current === 'alarm') {
-        this.alarmStopped('Bruker deaktiverte systemet.');
+        this.alarmStopped('Stoppet av bruker.');
       }
       this.clearTestStopTimer();
       this.clearDeterrenceTimer();
@@ -155,7 +155,7 @@ class McCallisterGuardApp extends Homey.App {
       this.falseAlarm.reset();
       this.escalation.cancel();
       this.simulation.stop();
-      await this.deterrence.abort('Bruker deaktiverte systemet.');
+      await this.deterrence.abort();
       await this.media.stopAll();
       this.previousArmedMode = null;
       this.alarmContext = null;
@@ -271,7 +271,7 @@ class McCallisterGuardApp extends Homey.App {
   }
 
   async stopAlarm(): Promise<void> {
-    this.eventLog.add('info', 'Bruker stoppet alarm manuelt.');
+    this.eventLog.add('info', 'Alarm stoppet.');
     this.clearTestStopTimer();
     this.clearDeterrenceTimer();
     this.stateMachine.cancelEntryDelay();
@@ -332,6 +332,28 @@ class McCallisterGuardApp extends Homey.App {
       this.deterrenceTimer = null;
       if (this.stateMachine.getMode() === 'deterrence') await this.enterAlarm();
     }, escalationMs);
+  }
+
+  /**
+   * Triggered by a perimeter sensor in armed_perimeter mode.
+   * Skips the deterrence phase and escalates directly to full alarm.
+   */
+  private async enterPerimeterAlarm(zoneId: string, deviceId: string, sensorType: 'motion' | 'contact'): Promise<void> {
+    const mode = this.stateMachine.getMode();
+    if (mode === 'alarm') return;
+    this.previousArmedMode = 'armed_perimeter';
+    const { zoneName, deviceName } = await this.resolveNames(zoneId, deviceId);
+    this.alarmContext = { zoneId, zoneName, deviceId, deviceName, sensorType, alarmType: 'perimeter' };
+    this.eventLog.add('alarm', `**Perimeter** Alarm: ${deviceName} i ${zoneName}.`, zoneId, deviceId);
+    const baseTokens = {
+      zone: zoneName,
+      sensor: deviceName,
+      sensor_type: sensorType,
+      mode,
+      timestamp: new Date().toISOString(),
+    };
+    try { await this.homey.flow.getTriggerCard('alarm_perimeter_triggered').trigger(baseTokens); } catch { /* best-effort */ }
+    await this.enterAlarm();
   }
 
   /**
@@ -669,17 +691,16 @@ class McCallisterGuardApp extends Homey.App {
     this.cameras.captureMotionBurst(zoneId, isAlertMode).catch(() => { /* best-effort */ });
     if (mode === 'disarmed') return;
     if (this.stateMachine.isExitDelayActive()) return;
-    this.eventLog.add('info', `Bevegelse i sone ${zoneId}.`, zoneId, deviceId);
-
     if (mode === 'armed_perimeter') {
+      // In perimeter mode: skip deterrence — go directly to alarm for perimeter sensors.
       if (!this.isPerimeterSensor(deviceId)) return;
-      if (this.isPerimeterBypassed()) {
-        this.eventLog.add('info', 'Bevegelse i perimetersensor ignorert (bypass aktiv).', zoneId, deviceId);
-        return;
-      }
-      await this.enterDeterrence(zoneId, deviceId, 'motion', 'perimeter');
+      if (this.isPerimeterBypassed()) return;
+      await this.enterPerimeterAlarm(zoneId, deviceId, 'motion');
       return;
     }
+
+    // Only log motion for away-armed mode (not perimeter mode).
+    this.eventLog.add('info', `Bevegelse i sone ${zoneId}.`, zoneId, deviceId);
 
     if (mode === 'deterrence' || mode === 'alarm') {
       // Already in deterrence/alarm — update reaction zone without resetting the escalation timer.
@@ -704,19 +725,15 @@ class McCallisterGuardApp extends Homey.App {
     const mode = this.stateMachine.getMode();
     if (mode === 'disarmed' || mode === 'deterrence' || mode === 'alarm') return;
     if (this.stateMachine.isExitDelayActive()) return;
-    this.eventLog.add('warning', `Dør/vindu åpnet i sone ${zoneId}.`, zoneId, deviceId);
-
-    if (mode === 'armed_perimeter' && !this.isPerimeterSensor(deviceId)) return;
-
-    if (mode === 'armed_perimeter' && this.isPerimeterBypassed()) {
-      this.eventLog.add('info', 'Dør/vindu i perimetersensor ignorert (bypass aktiv).', zoneId, deviceId);
-      return;
-    }
-
-    // Ignore sensors that were already open when armed_perimeter was activated.
-    if (mode === 'armed_perimeter' && this.openSensorsAtPerimeterStart.has(deviceId)) {
-      this.eventLog.add('info', 'Sensor var åpen ved aktivering av skallsikring — ignoreres.', zoneId, deviceId);
-      return;
+    // In perimeter mode: silently ignore non-perimeter sensors, bypassed sensors and
+    // sensors that were already open when armed_perimeter was activated.
+    if (mode === 'armed_perimeter') {
+      if (!this.isPerimeterSensor(deviceId)) return;
+      if (this.isPerimeterBypassed()) return;
+      if (this.openSensorsAtPerimeterStart.has(deviceId)) return;
+    } else {
+      // Only log door/window for away-armed mode.
+      this.eventLog.add('warning', `Dør/vindu åpnet i sone ${zoneId}.`, zoneId, deviceId);
     }
 
     if (this.isEntryDelaySensor(deviceId)) {
@@ -740,7 +757,7 @@ class McCallisterGuardApp extends Homey.App {
     }
 
     if (mode === 'armed_perimeter') {
-      await this.enterDeterrence(zoneId, deviceId, 'contact', 'perimeter');
+      await this.enterPerimeterAlarm(zoneId, deviceId, 'contact');
       return;
     }
     this.falseAlarm.registerContactOpen();
@@ -749,12 +766,11 @@ class McCallisterGuardApp extends Homey.App {
 
   private async handleConfirmedContact(zoneId: string, deviceId: string, mode: Mode): Promise<void> {
     if (this.stateMachine.getMode() === 'disarmed') return;
-    const alarmType: AlarmType = mode === 'armed_perimeter' ? 'perimeter' : 'entry_delay_timeout';
     if (mode === 'armed_perimeter') {
-      await this.enterDeterrence(zoneId, deviceId, 'contact', alarmType);
+      await this.enterPerimeterAlarm(zoneId, deviceId, 'contact');
       return;
     }
-    await this.handleConfirmedMotion(zoneId, deviceId, 'contact', alarmType);
+    await this.handleConfirmedMotion(zoneId, deviceId, 'contact', 'entry_delay_timeout');
   }
 
   private async handleConfirmedMotion(zoneId: string, deviceId: string, sensorType: 'motion' | 'contact', alarmType: AlarmType): Promise<void> {
