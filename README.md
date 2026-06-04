@@ -77,7 +77,8 @@ flowchart TB
   subgraph HOMEY[Homey Platform]
     DEV[Sensorer og lys]
     FLOW[Flow-motor - bruker-bygde avskrekkings-flows]
-    NOTIF[Timeline og push]
+    TIMELINE[Homey-tidslinje\nKort modus-status]
+    PUSH[Push-notifikasjon\nKritiske alarm-hendelser]
   end
 
   UI <--> API
@@ -86,7 +87,8 @@ flowchart TB
   DEV -- alarm_motion / alarm_contact --> APP
   APP -- onoff blink --> DEV
   APP -- alarm_triggered / alarm_perimeter_triggered / alarm_stopped / alarm_perimeter_stopped / mode_changed / snapshot_taken / health_check_failed --> FLOW
-  APP --> NOTIF
+  APP -- modus-bytte, alarm stoppet --> TIMELINE
+  APP -- avskrekking, alarm, åpne sensorer, offline --> PUSH
   SM --> AS
   DE --> MC
   EM --> MC
@@ -343,20 +345,41 @@ DA   Sett modus til Hjemme av [[bruker]]    ← set_mode action (name = låsens 
 
 > **Nattvindu-redirect:** Omdirigering fra `armed` til `armed_perimeter` gjelder kun når den innebygde Skallsikring-scheduleren er aktivert (Innstillinger → Skallsikring auto) og klokken er innenfor det konfigurerte tidsrommet (f.eks. 22:00–06:00). Automatisk scheduler og `force=true` fra interne flows går forbi denne logikken.
 
-#### Aktivering basert på tilstedeværelse (anbefalt)
+#### Aktivering — anbefalt strategi
 
-Bruk presence-sensorer til å **aktivere** Borte-modus, ikke til å deaktivere.
-Dette er trygt fordi false positives (tror feil at huset er tomt) er langt mindre farlig
-enn false negatives (deaktiverer alarmen mens du ikke er hjemme).
+> ⚠️ **Viktig om presence-basert aktivering og deaktivering**
+>
+> WiFi- og GPS-basert tilstedeværelse (Homey presence, mobil-GPS) er *upålitelig* som alene-kilde
+> for å styre alarmen. Et svakt WiFi-signal — f.eks. på verandaen, i garasjen eller i kjelleren — kan
+> feilaktig registrere deg som «ikke hjemme», aktivere alarmen, og utløse den igjen i det du kommer
+> innendørs og signalet kommer tilbake. Dette er en kjent feilkilde og kan gi falske alarmer selv om
+> du har vært hjemme hele tiden.
+>
+> **Anbefaling:**
+> - Bruk presence til å **aktivere** (armere) alarmen — men alltid med en exit-delay og gjerne i
+>   kombinasjon med en fysisk knapp eller app som override
+> - **Deaktiver aldri alarmen automatisk basert kun på presence** — bruk alltid smart-lås eller
+>   manuell deaktivering via dashboard/app
+> - Legg til en **fysisk knapp ved inngangsdøren** som aktiverer/deaktiverer alarmen — pålitelig,
+>   rask og fungerer uten internett
+> - Bruk **McCallister Guard-appen** (dashboard) for manuell kontroll når knappen ikke er tilgjengelig
+
+**Anbefalt oppsett: presence aktiverer, men knapp/lås deaktiverer**
 
 ```
 NÅR  Tilstedeværelse: Ingen hjemme          ← Homey presence / zone-trigger
-OG   Modus er [Hjemme (disarmed)]           ← get_mode condition (unngå å re-arme fra perimeter)
+OG   Modus er [Hjemme (disarmed)]           ← get_mode condition
 DA   Sett modus til Borte                   ← set_mode = armed
+
+NÅR  Smart-lås: Lås åpnet av [bruker]       ← pålitelig inngangs-trigger
+DA   Sett modus til Hjemme av [[bruker]]    ← set_mode action — deaktiverer alltid
+
+NÅR  Knapp trykket (ved inngangsdør)        ← fysisk Zigbee/Z-Wave-knapp
+DA   Sett modus til Hjemme                  ← rask manuell deaktivering
 ```
 
-> **Merk:** Bruk `get_mode = disarmed` som condition for å unngå at presence-flowen
-> overskriver en eksisterende `armed_perimeter` (nattmodus) når alle forlater huset om morgenen.
+> **Merk:** Bruk `get_mode = disarmed` som condition på presence-flowen for å unngå at den
+> overskriver en aktiv `armed_perimeter` (nattmodus) når alle forlater huset om morgenen.
 
 #### Aktivering av Skallsikring (nattmodus)
 
@@ -392,18 +415,20 @@ Eksempel:
 
 Appen sender push-notifikasjoner til Homey-appen for alle kritiske hendelser uten at brukeren trenger å sette opp flows:
 
-| Hendelse | Push-melding |
+| Hendelse | Push-melding / Tidslinje |
 |---|---|
+| Systemet deaktiveres | `Alarm av` |
+| Borte-modus aktivert | `Alarm på` |
+| Skallsikring aktivert | `Alarm skallsikring` |
+| Deaktivert av navngitt bruker | `Deaktivert av [navn]` |
 | Bevegelse/kontakt utløser avskrekking (Borte) | `🚨 Avskrekking: [sensor] i [sone]` |
 | Perimetersensor utløser direkte alarm (Skallsikring) | `🚨 Skallsikring alarm: [sensor] i [sone]` |
 | Avskrekking eskalerer til full alarm | `🚨 ALARM utløst i [sone] — [sensor]` |
-| Alarm stoppet | `Alarm stoppet (sone: [sone]) — [årsak]` |
-| Modus-bytte (arm/deaktiver) | Modus-etiketten, f.eks. `Borte` / `Skallsikring` / `ALARM` |
-| Deaktivert av bruker | `Deaktivert av [navn]` |
+| Alarm stoppet | `Alarm stoppet` |
 | Åpne sensorer ved armering | Se tabellen nedenfor |
 | Sensorer offline ved helsesjekk | `⚠️ Aktivert, men N sensor(er) rapporterer ikke: [navn]` |
 
-Push-varsler er best-effort — de logges alltid i intern event-logg uavhengig av nettverksstatus.
+Push-varsler er best-effort — alle hendelser logges alltid i intern event-logg uavhengig av nettverksstatus.
 
 #### Åpne sensorer ved aktivering — push-varsel
 
@@ -419,6 +444,60 @@ Armering stoppes ikke — varslingen er informativ. I Skallsikring ignoreres all
 #### Helsesjekk ved Borte-aktivering
 
 Appen sjekker i tillegg om noen sensorer er offline (utilgjengelige). Er noen utilgjengelige, sendes en separat push-notifikasjon og en advarsel logges.
+
+---
+
+## Hva logges hvor
+
+McCallister Guard bruker tre separate loggkanaler med ulike formål:
+
+| Kanal | Hva | Detalj-nivå | Varighet |
+|---|---|---|---|
+| **Homey-tidslinje** | Modus-bytter og kritiske alarm-hendelser | Kort og konsist — kun det brukeren trenger å se | Styrast av Homey |
+| **Push-notifikasjon** | Alle kritiske hendelser (avskrekking, alarm, åpne sensorer, offline sensorer) | Kort melding med sensor og sone | Umiddelbar, best-effort |
+| **Intern hendelseslogg** (Hendelseslogg-fanen) | Full teknisk detalj for alle hendelser | Sensor-ID, sone-ID, årsak, tidsstempel, modus | 14 dagers rullerende vindu |
+
+### Homey-tidslinje — hva som postes
+
+Tidslinjen viser bare høy-nivå modus-endringer. Ikoner/app-logo vises automatisk — appen legger ikke til eget app-navn i teksten.
+
+| Hendelse | Tidslinje-tekst |
+|---|---|
+| Systemet deaktiveres | `Alarm av` |
+| Borte-modus aktivert | `Alarm på` |
+| Skallsikring aktivert | `Alarm skallsikring` |
+| Avskrekking startet (som modus) | `Avskrekking` |
+| Full alarm (som modus) | `🚨 ALARM` |
+| Deaktivert av navngitt bruker | `Deaktivert av [navn]` |
+| Alarm stoppet manuelt | `Alarm stoppet` |
+
+### Push-notifikasjoner — hva som sendes
+
+Push-notifikasjoner sendes i tillegg til tidslinje-oppføringene for alle kritiske hendelser:
+
+| Hendelse | Push-melding |
+|---|---|
+| Sensor utløser avskrekking | `🚨 Avskrekking: [sensor] i [sone]` |
+| Perimetersensor utløser alarm | `🚨 Skallsikring alarm: [sensor] i [sone]` |
+| Avskrekking eskalerer | `🚨 ALARM utløst i [sone] — [sensor]` |
+| Åpne sensorer (Borte-modus) | `⚠️ N dør/vindu åpen(e) ved aktivering: [navn]` |
+| Åpne sensorer (Skallsikring) | `ℹ️ Skallsikring aktivert: N sensor(er) åpen — ignoreres: [navn]` |
+| Sensorer offline | `⚠️ Aktivert, men N sensor(er) rapporterer ikke: [navn]` |
+
+### Intern hendelseslogg — hva som skrives
+
+Den interne loggen (Hendelseslogg-fanen i settings) inneholder all teknisk detalj som ikke passer i tidslinjen:
+
+- Hvilken sensor utløste hendelsen (navn + device-ID)
+- Hvilken sone hendelsen skjedde i
+- Årsak til alarm-stopp (bruker, auto-stopp, timeout)
+- Entry-delay-nedtellinger (start, avbrytt, utløpt)
+- FalseAlarmFilter-vurderinger (konfidens-terskel, reset)
+- Lys-slukking etter alarm («N lys slukket»)
+- Snapshot-aktivitet fra CameraManager
+- Alle feilmeldinger og best-effort-advarsler
+
+Loggen kan kopieres til utklippstavlen, lastes ned som CSV eller tømmes fra Hendelseslogg-fanen. Rullerende vindu — oppføringer eldre enn 14 dager slettes automatisk.
 
 ---
 
