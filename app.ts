@@ -380,7 +380,7 @@ class McCallisterGuardApp extends Homey.App {
 
   private alarmStopped(reason: string): void {
     const ctx = this.alarmContext;
-    this.pushTimeline(`Alarm stoppet${ctx?.zoneName ? ` (sone: ${ctx.zoneName})` : ''} — ${reason}`);
+    this.pushTimeline('Alarm stoppet');
 
     const alarmType = ctx?.alarmType ?? 'intrusion';
     const baseTokens = {
@@ -401,11 +401,11 @@ class McCallisterGuardApp extends Homey.App {
   }
 
   private modeLabel(mode: Mode): string {
-    if (mode === 'disarmed') return 'Hjemme (av)';
-    if (mode === 'armed') return 'Borte (aktiv)';
-    if (mode === 'armed_perimeter') return 'Skallsikring';
-    if (mode === 'deterrence') return 'Avskrekking aktiv';
-    if (mode === 'alarm') return 'ALARM';
+    if (mode === 'disarmed') return 'Alarm av';
+    if (mode === 'armed') return 'Alarm på';
+    if (mode === 'armed_perimeter') return 'Alarm skallsikring';
+    if (mode === 'deterrence') return 'Avskrekking';
+    if (mode === 'alarm') return '🚨 ALARM';
     return String(mode);
   }
 
