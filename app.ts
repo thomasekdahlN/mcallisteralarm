@@ -473,14 +473,30 @@ class McCallisterGuardApp extends Homey.App {
    *
    * @param startup - When true, initialise lastArmedStayWindowState without triggering any action.
    */
+  /**
+   * Returns the current local time as "HH:MM" in the Homey-configured timezone.
+   * Homey Pro runs Node.js in UTC, so we must not use Date#getHours() directly.
+   */
+  private localHHMM(): string {
+    const tz = this.homey.clock.getTimezone();
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: tz,
+    }).formatToParts(new Date());
+    const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
+    const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+    return `${h}:${m}`;
+  }
+
   private checkArmedStaySchedule(startup: boolean): void {
     const settings = this.getSettings();
     if (!settings.armed_perimeter_auto) return;
 
     const on = settings.armed_perimeter_on || '22:00';
     const off = settings.armed_perimeter_off || '06:00';
-    const now = new Date();
-    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const hhmm = this.localHHMM();
 
     // Determine whether we are currently inside the armed_perimeter window.
     // Overnight windows (e.g. 22:00–06:00) cross midnight: inside when now >= on OR now < off.
@@ -636,8 +652,7 @@ class McCallisterGuardApp extends Homey.App {
     if (!settings.armed_perimeter_auto) return false;
     const on = settings.armed_perimeter_on || '22:00';
     const off = settings.armed_perimeter_off || '06:00';
-    const now = new Date();
-    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const hhmm = this.localHHMM();
     const overnight = on > off;
     return overnight ? (hhmm >= on || hhmm < off) : (hhmm >= on && hhmm < off);
   }
