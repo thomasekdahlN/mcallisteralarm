@@ -33,6 +33,12 @@ export interface GuardSettings {
   zone_matrix: ZoneMatrix;
   kevin_zones: KevinZones;
   perimeter_sensors: string[];
+  /**
+   * Tracks all sensor IDs that have been shown in the zones UI at least once.
+   * Used to distinguish "new sensor (never configured)" from "explicitly unchecked".
+   * New contact sensors default to perimeter=true; new motion sensors default to false.
+   */
+  perimeter_sensors_seen: string[];
   entry_delay_sensors: string[];
   /** Global deterrence blink-on time in seconds (default 15). */
   blink_on: number;
@@ -99,6 +105,7 @@ export const DEFAULT_SETTINGS: GuardSettings = {
   zone_matrix: {},
   kevin_zones: {},
   perimeter_sensors: [],
+  perimeter_sensors_seen: [],
   entry_delay_sensors: [],
   blink_on: DEFAULT_BLINK_SECONDS,
   blink_off: DEFAULT_BLINK_SECONDS,

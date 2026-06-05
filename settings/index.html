@@ -1267,6 +1267,7 @@
           }
 
           const perimeterSet = new Set(settings.perimeter_sensors || []);
+          const perimeterSeenSet = new Set(settings.perimeter_sensors_seen || []);
           const entryDelaySet = new Set(settings.entry_delay_sensors || []);
           const sensors = z.sensors || [];
           let sensorBlock = '';
@@ -1274,7 +1275,12 @@
             const sensorRows = sensors.map((s) => {
               const icon = s.type === 'contact' ? '🚪' : '👁️';
               const typeLabel = s.type === 'contact' ? 'dør/vindu' : 'bevegelse';
-              const perim = perimeterSet.has(s.id) ? 'checked' : '';
+              // New sensors (never seen before) default based on type:
+              //   door/window (contact) → perimeter ON by default
+              //   motion → perimeter OFF by default
+              const isNewSensor = !perimeterSeenSet.has(s.id);
+              const perimDefault = isNewSensor && s.type === 'contact';
+              const perim = (perimeterSet.has(s.id) || perimDefault) ? 'checked' : '';
               const entry = entryDelaySet.has(s.id) ? 'checked' : '';
               const entryBox = s.type === 'contact'
                 ? `<label class="sensor-flag" title="Inngangsforsinkelse — gi tid til å deaktivere før alarm utløses (f.eks. hoveddør med kodelås)."><input type="checkbox" data-entry-delay="${esc(s.id)}" ${entry}> ⏱</label>`
@@ -1506,12 +1512,19 @@
       });
       $('btn-save-zones').addEventListener('click', async () => {
         const payload = {
-          kevin_zones: {}, zone_matrix: {}, perimeter_sensors: [], entry_delay_sensors: [],
+          kevin_zones: {}, zone_matrix: {}, perimeter_sensors: [], perimeter_sensors_seen: [],
+          entry_delay_sensors: [],
           camera_alarm_cams: {}, camera_motion_cams: {},
           camera_snapshot_urls: {},
         };
         document.querySelectorAll('[data-kevin]').forEach((c) => { payload.kevin_zones[c.dataset.kevin] = c.checked; });
         document.querySelectorAll('[data-matrix]').forEach((s) => { if (s.value) payload.zone_matrix[s.dataset.matrix] = s.value; });
+        // Track every rendered perimeter checkbox as "seen" so new sensors
+        // can be distinguished from explicitly-unchecked sensors on next render.
+        const previousSeen = settings.perimeter_sensors_seen || [];
+        const nowSeen = [];
+        document.querySelectorAll('[data-perimeter]').forEach((c) => { nowSeen.push(c.dataset.perimeter); });
+        payload.perimeter_sensors_seen = [...new Set([...previousSeen, ...nowSeen])];
         document.querySelectorAll('[data-perimeter]:checked').forEach((c) => { payload.perimeter_sensors.push(c.dataset.perimeter); });
         document.querySelectorAll('[data-entry-delay]:checked').forEach((c) => { payload.entry_delay_sensors.push(c.dataset.entryDelay); });
         document.querySelectorAll('[data-camera-alarm-cam]').forEach((c) => {

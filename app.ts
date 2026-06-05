@@ -309,7 +309,10 @@ class McCallisterGuardApp extends Homey.App {
     };
     const alarmLabel = alarmType === 'perimeter' ? '**Perimeter**' : '**Alarm**';
     this.eventLog.add('alarm', `${alarmLabel} Avskrekking i ${zoneName} — ${deviceName}.`, zoneId, deviceId);
-    this.pushTimeline(`🚨 Avskrekking: ${deviceName} i ${zoneName}`);
+    const pushMsg = alarmType === 'perimeter'
+      ? `🚨 Skallsikring: ${deviceName} i ${zoneName}`
+      : `🚨 Avskrekking: ${deviceName} i ${zoneName}`;
+    this.pushTimeline(pushMsg);
 
     await this.stateMachine.setMode('deterrence');
 
@@ -340,28 +343,12 @@ class McCallisterGuardApp extends Homey.App {
 
   /**
    * Triggered by a perimeter sensor in armed_perimeter mode.
-   * Skips the deterrence phase and escalates directly to full alarm.
+   * Routes through enterDeterrence (perimeter type) so that the escalation
+   * timer (escalation_minutes) is respected before full alarm fires.
+   * Full alarm is NEVER triggered directly from armed_perimeter mode.
    */
   private async enterPerimeterAlarm(zoneId: string, deviceId: string, sensorType: 'motion' | 'contact'): Promise<void> {
-    const mode = this.stateMachine.getMode();
-    if (mode === 'alarm') return;
-    this.previousArmedMode = 'armed_perimeter';
-    const { zoneName, deviceName } = await this.resolveNames(zoneId, deviceId);
-    this.alarmContext = {
-      zoneId, zoneName, deviceId, deviceName, sensorType, alarmType: 'perimeter',
-    };
-    this.eventLog.add('alarm', `**Perimeter** Alarm: ${deviceName} i ${zoneName}.`, zoneId, deviceId);
-    this.pushTimeline(`🚨 Skallsikring alarm: ${deviceName} i ${zoneName}`);
-    const baseTokens: Record<string, unknown> = {
-      zone: zoneName,
-      sensor: deviceName,
-      sensor_type: sensorType,
-      mode,
-      timestamp: new Date().toISOString(),
-    };
-    if (this.latestSnapshot !== null) baseTokens.snapshot = this.latestSnapshot;
-    try { await this.homey.flow.getTriggerCard('alarm_perimeter_triggered').trigger(baseTokens); } catch { /* best-effort */ }
-    await this.enterAlarm();
+    await this.enterDeterrence(zoneId, deviceId, sensorType, 'perimeter');
   }
 
   /**
